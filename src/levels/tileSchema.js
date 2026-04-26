@@ -54,12 +54,13 @@ export function parseLevel(map) {
   const specials = [];
   let bunnySpawn = { x: TILE_SIZE * 1.5, y: TILE_SIZE * 1.5 };
 
-  let puzzleId = 0;
-  let doorId = 0;
+  // Door groups: vertically-adjacent D tiles share a single group id.
+  // doorGroupGrid[r][c] holds the group id assigned to that cell (or undefined).
+  const doorGroupGrid = tiles.map(row => row.map(() => undefined));
+  const doorGroups = []; // groupId -> [{row, col, x, y}, ...] (top-to-bottom)
+  let nextDoorGroupId = 0;
 
-  // We pair puzzles and doors sequentially (first puzzle -> first door, etc)
   const puzzles = [];
-  const doors = [];
 
   tiles.forEach((row, r) => {
     row.forEach((ch, c) => {
@@ -75,9 +76,14 @@ export function parseLevel(map) {
       } else if (ch === TILE.SPIKE) {
         specials.push({ type: 'spike', row: r, col: c, x, y });
       } else if (ch === TILE.PUZZLE) {
-        puzzles.push({ type: 'puzzle', row: r, col: c, x, y, id: puzzleId++ });
+        puzzles.push({ type: 'puzzle', row: r, col: c, x, y });
       } else if (ch === TILE.DOOR) {
-        doors.push({ type: 'door', row: r, col: c, x, y, id: doorId++ });
+        // Inherit group id from D directly above, otherwise start a new group.
+        const aboveId = r > 0 ? doorGroupGrid[r - 1][c] : undefined;
+        const gid = aboveId !== undefined ? aboveId : nextDoorGroupId++;
+        doorGroupGrid[r][c] = gid;
+        if (!doorGroups[gid]) doorGroups[gid] = [];
+        doorGroups[gid].push({ row: r, col: c, x, y });
       } else if (ch === TILE.ENEMY_FOX) {
         specials.push({ type: 'enemy_fox', row: r, col: c, x, y });
       } else if (ch === TILE.ENEMY_BUG) {
@@ -86,12 +92,16 @@ export function parseLevel(map) {
     });
   });
 
-  // Pair puzzles with doors by index
+  // Pair puzzles with door groups by index.
   puzzles.forEach((p, i) => {
-    p.doorIndex = i;
+    p.id = i;
     specials.push(p);
   });
-  doors.forEach(d => specials.push(d));
+  doorGroups.forEach((tilesInGroup, gid) => {
+    tilesInGroup.forEach(t => {
+      specials.push({ type: 'door', row: t.row, col: t.col, x: t.x, y: t.y, id: gid });
+    });
+  });
 
   return {
     tiles,

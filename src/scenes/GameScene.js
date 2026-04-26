@@ -93,6 +93,11 @@ export class GameScene extends Phaser.Scene {
     // Set initial checkpoint at spawn
     this.checkpointX = this.parsedLevel.bunnySpawn.x;
     this.checkpointY = this.parsedLevel.bunnySpawn.y;
+
+    // Grant brief spawn-grace invuln so enemies right next to the spawn
+    // can't hit the player on frame 1.
+    this.isInvuln = true;
+    this.invulnTimer = INVULN_TIME;
   }
 
   _buildBackground() {
@@ -187,7 +192,7 @@ export class GameScene extends Phaser.Scene {
     // Collections
     this.checkpoints = [];
     this.puzzleTriggers = [];
-    this.doors = new Map(); // puzzleId -> door sprite
+    this.doors = new Map(); // puzzleId -> door sprite[] (door group)
     this.enemies = [];
     this.carrot = null;
     this.spikes = this.physics.add.staticGroup();
@@ -218,7 +223,7 @@ export class GameScene extends Phaser.Scene {
         // Store puzzle trigger info (zone-based overlap)
         this.puzzleTriggers.push({
           x, y,
-          id: spec.doorIndex,
+          id: spec.id,
           triggered: false,
           bounds: new Phaser.Geom.Rectangle(x - TILE_SIZE / 2, y - TILE_SIZE / 2, TILE_SIZE, TILE_SIZE),
         });
@@ -227,7 +232,9 @@ export class GameScene extends Phaser.Scene {
         doorSprite.setScale(TILE_SCALE);
         doorSprite.refreshBody();
         doorSprite.setDepth(5);
-        this.doors.set(spec.id, doorSprite);
+        const group = this.doors.get(spec.id) || [];
+        group.push(doorSprite);
+        this.doors.set(spec.id, group);
       } else if (type === 'enemy_fox') {
         this._spawnEnemy(x, y, 'fox');
       } else if (type === 'enemy_beetle') {
@@ -309,9 +316,9 @@ export class GameScene extends Phaser.Scene {
       return bunny.body.velocity.y >= 0 && bunny.body.bottom <= platform.body.top + 8;
     });
 
-    // Bunny vs doors
-    this.doors.forEach(door => {
-      this.physics.add.collider(this.bunny, door);
+    // Bunny vs doors (each group is an array of sprites)
+    this.doors.forEach(group => {
+      group.forEach(door => this.physics.add.collider(this.bunny, door));
     });
 
     // Enemies vs ground
@@ -319,6 +326,13 @@ export class GameScene extends Phaser.Scene {
       this.physics.add.collider(enemy, this.groundGroup);
       this.physics.add.collider(enemy, this.platformGroup);
     });
+
+    // Bunny vs enemies — physics overlap (replaces previous distance check)
+    if (this.enemies.length > 0) {
+      this.physics.add.overlap(this.bunny, this.enemies, () => {
+        this._hurtBunny();
+      });
+    }
 
     // Bunny vs spikes
     this.physics.add.overlap(this.bunny, this.spikes, () => {
@@ -457,16 +471,6 @@ export class GameScene extends Phaser.Scene {
       if (!SOLID_TILES.has(tileAtFoot) && body.blocked.down) {
         enemy._dir *= -1;
       }
-
-      // Check bunny collision with enemy
-      if (!this.isInvuln && this.bunny.active) {
-        const dx = this.bunny.x - enemy.x;
-        const dy = this.bunny.y - enemy.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < TILE_SIZE * 1.5) {
-          this._hurtBunny();
-        }
-      }
     });
   }
 
@@ -518,10 +522,10 @@ export class GameScene extends Phaser.Scene {
     if (puzzleResult === 'success') {
       this.solvedPuzzles.add(puzzleId);
 
-      // Remove corresponding door
-      const door = this.doors.get(puzzleId);
-      if (door) {
-        door.destroy();
+      // Remove every door tile in this group
+      const group = this.doors.get(puzzleId);
+      if (group) {
+        group.forEach(door => door.destroy());
         this.doors.delete(puzzleId);
       }
 
