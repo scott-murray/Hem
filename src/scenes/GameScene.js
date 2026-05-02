@@ -5,6 +5,7 @@ import { LEVEL2_MAP, LEVEL2_CONFIG } from '../levels/level2.js';
 import { LEVEL3_MAP, LEVEL3_CONFIG } from '../levels/level3.js';
 import { storage } from '../progress/storage.js';
 import { sfx } from '../audio/sfx.js';
+import { music } from '../audio/music.js';
 import { setupKeyboard, updateInput, inputState } from '../input/controls.js';
 
 const W = 480;
@@ -68,6 +69,9 @@ export class GameScene extends Phaser.Scene {
 
     this.levelConfig = levelData.config;
     this.parsedLevel = parseLevel(levelData.map);
+
+    // Per-level chiptune
+    music.play(`level${this.levelNumber}`);
 
     // Background
     this._buildBackground();

@@ -2,8 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Bunny's Carrot Quest</title>
+
+  <!-- iOS PWA / Add-to-Home-Screen: hides the URL bar when launched from
+       the home screen icon. Plain Safari can't hide it via JS. -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Bunny" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0d0d0d" />
+
+  <!-- Inline manifest so docs/index.html stays a single self-contained file. -->
+  <link rel="manifest" href='data:application/manifest+json,{"name":"Bunny%27s%20Carrot%20Quest","short_name":"Bunny","display":"fullscreen","orientation":"landscape","background_color":"%230d0d0d","theme_color":"%230d0d0d"}' />
+
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
@@ -11,6 +23,15 @@
       height: 100%;
       background: #0d0d0d;
       overflow: hidden;
+      /* Block pull-to-refresh, pinch-zoom, text-select on touch devices so
+         taps near the canvas edge don't accidentally scroll the page. */
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      overscroll-behavior: contain;
+    }
+    body {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -21,11 +42,60 @@
     }
     canvas {
       display: block;
+      /* Letterbox area is the same colour as #0d0d0d body so the edges look
+         intentional rather than a "broken layout". */
+    }
+
+    /* Portrait-mode hint: only shown on a phone-sized screen held upright.
+       Hides the canvas so accidental taps don't register, and asks the
+       player to rotate. */
+    .rotate-hint {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #0d0d0d;
+      color: #ffd54f;
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 14px;
+      font-family: monospace;
+      text-align: center;
+      padding: 24px;
+    }
+    .rotate-hint .glyph {
+      font-size: 56px;
+      animation: rotwiggle 1.6s ease-in-out infinite;
+    }
+    .rotate-hint h1 {
+      font-size: 18px;
+      color: #fff;
+    }
+    .rotate-hint p {
+      font-size: 12px;
+      color: #c5cae9;
+      max-width: 280px;
+      line-height: 1.5;
+    }
+    @keyframes rotwiggle {
+      0%, 100% { transform: rotate(-15deg); }
+      50%      { transform: rotate(75deg); }
+    }
+    /* Trigger the hint on small portrait viewports (phones held upright). */
+    @media (orientation: portrait) and (max-width: 720px) {
+      .rotate-hint { display: flex; }
+      #game { display: none; }
     }
   </style>
 </head>
 <body>
   <div id="game"></div>
+  <div class="rotate-hint" aria-hidden="true">
+    <div class="glyph">📱</div>
+    <h1>Rotate your phone</h1>
+    <p>Bunny's Carrot Quest plays best in landscape.<br />Turn your device sideways to start.</p>
+  </div>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

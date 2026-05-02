@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { storage } from '../progress/storage.js';
 import { sfx } from '../audio/sfx.js';
+import { music } from '../audio/music.js';
 
 const W = 480;
 const H = 270;
@@ -13,12 +14,16 @@ export class StartScene extends Phaser.Scene {
   create() {
     this.progress = storage.load();
     sfx.setMuted(this.progress.muted);
+    music.setMuted(this.progress.muted);
 
     this._buildBackground();
     this._buildTitle();
     this._buildBunny();
     this._buildLevelButtons();
     this._buildBottomButtons();
+
+    // Title music will start as soon as the audio is unlocked.
+    music.play('title');
 
     // Unlock audio on first interaction
     this.input.once('pointerdown', () => sfx.unlock());
@@ -161,6 +166,7 @@ export class StartScene extends Phaser.Scene {
         const zone = this.add.zone(bx, btnY, btnW, btnH).setOrigin(0, 0).setInteractive();
         zone.on('pointerdown', () => {
           sfx.unlock();
+          this._maybeAutoFullscreen();
           this.scene.start('GameScene', { level });
         });
         zone.on('pointerover', () => {
@@ -202,8 +208,18 @@ export class StartScene extends Phaser.Scene {
     const playZone = this.add.zone(playBtnX, playBtnY, playBtnW, 40).setOrigin(0, 0).setInteractive();
     playZone.on('pointerdown', () => {
       sfx.unlock();
+      this._maybeAutoFullscreen();
       this.scene.start('GameScene', { level: progress.unlockedLevel });
     });
+  }
+
+  _maybeAutoFullscreen() {
+    // On touch devices we want to maximise the play area; the Play / level
+    // button click is a real user gesture so the browser allows it.
+    const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    if (isTouch && !this.scale.isFullscreen) {
+      try { this.scale.startFullscreen(); } catch (e) { /* ignore */ }
+    }
   }
 
   _buildBottomButtons() {
@@ -237,6 +253,7 @@ export class StartScene extends Phaser.Scene {
       sfx.unlock();
       const newMuted = !sfx.isMuted();
       sfx.setMuted(newMuted);
+      music.setMuted(newMuted);
       storage.setMuted(newMuted);
       this.progress.muted = newMuted;
       this.muteText.setText(newMuted ? '🔇 MUTED' : '🔊 SOUND');
