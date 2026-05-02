@@ -3,8 +3,6 @@ import { inputState } from '../input/controls.js';
 
 const W = 480;
 const H = 270;
-const BTN_SIZE = 56; // touch button size in display px (but scene is 480×270, so ~19px)
-const BTN_SIZE_PX = 44; // actual pixels in 480×270 space
 
 export class UIScene extends Phaser.Scene {
   constructor() {
@@ -15,16 +13,18 @@ export class UIScene extends Phaser.Scene {
     this.lives = 3;
     this.levelName = '';
     this._hearts = [];
-    this._touchButtons = [];
     this._isMobile = this._detectTouch();
+
+    // Track which finger is on which side, by Phaser pointer id, so two
+    // simultaneous fingers (one per side) work correctly.
+    this._sideForPointer = new Map();
 
     this._buildHUD();
 
     if (this._isMobile) {
-      this._buildTouchControls();
+      this._buildTouchZones();
     }
 
-    // Listen to events from GameScene
     this.events.on('shutdown', this._cleanup, this);
   }
 
@@ -64,6 +64,9 @@ export class UIScene extends Phaser.Scene {
       const heart = this.add.image(8 + i * 14, 9, 'heart_full').setOrigin(0, 0.5).setScale(1.5);
       this._hearts.push(heart);
     }
+
+    // Fullscreen toggle (top-right)
+    this._buildFullscreenBtn();
   }
 
   _updateHearts() {
@@ -72,64 +75,97 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  _buildTouchControls() {
-    const alpha = 0.5;
-    const pad = 8;
+  _buildFullscreenBtn() {
+    const w = 30;
+    const h = 14;
+    const x = W - w - 4;
+    const y = 2;
 
-    // Left button
-    this._leftBtn = this._makeTouchBtn(
-      pad, H - pad - BTN_SIZE_PX, BTN_SIZE_PX, BTN_SIZE_PX, '◀', alpha
-    );
-    // Right button
-    this._rightBtn = this._makeTouchBtn(
-      pad + BTN_SIZE_PX + 6, H - pad - BTN_SIZE_PX, BTN_SIZE_PX, BTN_SIZE_PX, '▶', alpha
-    );
-    // Jump button (bottom-right)
-    this._jumpBtn = this._makeTouchBtn(
-      W - pad - BTN_SIZE_PX, H - pad - BTN_SIZE_PX, BTN_SIZE_PX, BTN_SIZE_PX, '▲', alpha
-    );
-
-    // Wire up touch events
-    this._setupBtnInput(this._leftBtn.zone, '_touchLeft');
-    this._setupBtnInput(this._rightBtn.zone, '_touchRight');
-    this._setupBtnInput(this._jumpBtn.zone, '_touchJump');
-  }
-
-  _makeTouchBtn(x, y, w, h, label, alpha) {
     const g = this.add.graphics();
-    g.fillStyle(0x37474f, alpha);
+    g.fillStyle(0x37474f, 0.6);
     g.fillRect(x, y, w, h);
-    g.lineStyle(2, 0x78909c, alpha);
+    g.lineStyle(1, 0x78909c, 0.6);
     g.strokeRect(x, y, w, h);
 
-    const text = this.add.text(x + w / 2, y + h / 2, label, {
-      fontSize: '16px',
+    this._fsLabel = this.add.text(x + w / 2, y + h / 2, '⛶ FS', {
+      fontSize: '7px',
       fontFamily: 'monospace',
-      color: '#ffffff',
-      alpha: alpha + 0.2,
+      color: '#cfd8dc',
     }).setOrigin(0.5);
 
     const zone = this.add.zone(x, y, w, h).setOrigin(0, 0).setInteractive();
-
-    return { g, text, zone };
+    zone.on('pointerdown', (pointer, _x, _y, event) => {
+      if (event && event.stopPropagation) event.stopPropagation();
+      if (this.scale.isFullscreen) this.scale.stopFullscreen();
+      else this.scale.startFullscreen();
+    });
   }
 
-  _setupBtnInput(zone, stateKey) {
-    zone.on('pointerdown', () => {
-      inputState[stateKey] = true;
-    });
-    zone.on('pointerup', () => {
-      inputState[stateKey] = false;
-    });
-    zone.on('pointerout', () => {
-      inputState[stateKey] = false;
-    });
+  _buildTouchZones() {
+    // Two invisible (faintly-tinted) zones covering left and right halves of
+    // the canvas. Holding a side moves that direction; every pointerdown also
+    // fires a one-shot jump so kids can play one-handed.
+    const leftZone = this.add.zone(0, 18, W / 2, H - 18).setOrigin(0, 0).setInteractive();
+    const rightZone = this.add.zone(W / 2, 18, W / 2, H - 18).setOrigin(0, 0).setInteractive();
+
+    // Faint edge gradient so the touch areas are discoverable without
+    // dominating the playfield.
+    const tint = this.add.graphics();
+    tint.fillStyle(0xffffff, 0.04);
+    tint.fillRect(0, 18, W / 2, H - 18);
+    tint.fillStyle(0x000000, 0.04);
+    tint.fillRect(W / 2, 18, W / 2, H - 18);
+    tint.setDepth(-1);
+
+    // Hint glyphs (low alpha)
+    this.add.text(40, H - 20, '◀ HOLD', {
+      fontSize: '7px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+    }).setOrigin(0, 0.5).setAlpha(0.35);
+    this.add.text(W - 40, H - 20, 'HOLD ▶', {
+      fontSize: '7px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+    }).setOrigin(1, 0.5).setAlpha(0.35);
+    this.add.text(W / 2, H - 32, 'TAP TO JUMP', {
+      fontSize: '7px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+    }).setOrigin(0.5).setAlpha(0.3);
+
+    const downHandler = (side) => (pointer) => {
+      this._sideForPointer.set(pointer.id, side);
+      if (side === 'left') inputState._touchLeft = true;
+      else inputState._touchRight = true;
+      // One-shot jump request — every tap-down also tries to jump
+      inputState._touchJumpRequest = true;
+    };
+
+    const upHandler = (pointer) => {
+      const side = this._sideForPointer.get(pointer.id);
+      if (!side) return;
+      this._sideForPointer.delete(pointer.id);
+      // Only clear the side if no other finger is still on it
+      const stillLeft = [...this._sideForPointer.values()].includes('left');
+      const stillRight = [...this._sideForPointer.values()].includes('right');
+      inputState._touchLeft = stillLeft;
+      inputState._touchRight = stillRight;
+    };
+
+    leftZone.on('pointerdown', downHandler('left'));
+    rightZone.on('pointerdown', downHandler('right'));
+
+    // Listen to release globally so dragging off the zone still releases
+    // properly. pointerup fires on the scene's input system.
+    this.input.on('pointerup', upHandler);
+    this.input.on('pointerupoutside', upHandler);
   }
 
   _cleanup() {
-    // Reset touch state on cleanup
     inputState._touchLeft = false;
     inputState._touchRight = false;
-    inputState._touchJump = false;
+    inputState._touchJumpRequest = false;
+    this._sideForPointer.clear();
   }
 }

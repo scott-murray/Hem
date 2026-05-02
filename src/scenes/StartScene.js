@@ -242,6 +242,37 @@ export class StartScene extends Phaser.Scene {
       this.muteText.setText(newMuted ? '🔇 MUTED' : '🔊 SOUND');
     });
 
+    // Fullscreen toggle (centred between mute and reset)
+    const fsX = (W - 70) / 2;
+    const fsY = H - 35;
+    const fsW = 70;
+    const fsH = 26;
+
+    const fsG = this.add.graphics();
+    fsG.fillStyle(0x263238, 1);
+    fsG.fillRect(fsX, fsY, fsW, fsH);
+    fsG.lineStyle(1, 0x546e7a, 1);
+    fsG.strokeRect(fsX, fsY, fsW, fsH);
+
+    const fsLabel = this.add.text(fsX + fsW / 2, fsY + fsH / 2,
+      this.scale.isFullscreen ? '⛶ EXIT FS' : '⛶ FULLSCR', {
+        fontSize: '8px',
+        fontFamily: 'monospace',
+        color: '#cfd8dc',
+      }).setOrigin(0.5);
+
+    const fsZone = this.add.zone(fsX, fsY, fsW, fsH).setOrigin(0, 0).setInteractive();
+    fsZone.on('pointerdown', () => {
+      sfx.unlock();
+      if (this.scale.isFullscreen) {
+        this.scale.stopFullscreen();
+        fsLabel.setText('⛶ FULLSCR');
+      } else {
+        this.scale.startFullscreen();
+        fsLabel.setText('⛶ EXIT FS');
+      }
+    });
+
     // Reset button
     const resetX = W - 100;
     const resetY = H - 35;
@@ -300,7 +331,10 @@ export class StartScene extends Phaser.Scene {
     });
 
     // Controls hint
-    this.add.text(W / 2, H - 10, 'Arrow Keys / WASD + SPACE to jump', {
+    const hint = ('ontouchstart' in window) || navigator.maxTouchPoints > 0
+      ? 'Hold left/right to move • Tap to jump'
+      : 'Arrow keys / WASD to move • SPACE to jump';
+    this.add.text(W / 2, H - 10, hint, {
       fontSize: '7px',
       fontFamily: 'monospace',
       color: '#546e7a',

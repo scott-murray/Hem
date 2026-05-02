@@ -10,13 +10,26 @@ import { setupKeyboard, updateInput, inputState } from '../input/controls.js';
 const W = 480;
 const H = 270;
 
-const GRAVITY = 900;
-const JUMP_VELOCITY = -380;
-const RUN_SPEED = 160;
+const GRAVITY = 1100;
+const JUMP_VELOCITY = -480;
+const JUMP_CUT_VELOCITY = -160;   // upward speed cap when jump released early
+const RUN_SPEED = 150;
+const RUN_ACCEL_GROUND = 1500;    // px/s² while pressing a direction on ground
+const RUN_ACCEL_AIR = 600;        // px/s² while pressing a direction in air
+const FRICTION_GROUND = 1400;     // px/s² when not pressing on ground
+const FRICTION_AIR = 100;         // px/s² when not pressing in air (preserve momentum)
 const COYOTE_TIME = 80;
 const JUMP_BUFFER = 80;
-const INVULN_TIME = 1500; // ms of invulnerability after hurt
-const ENEMY_SPEED = 50;
+const INVULN_TIME = 1500;          // ms of invulnerability after hurt
+const SPAWN_GRACE_INVULN = 1500;   // ms of grace at level start
+const ENEMY_SPEED = 35;
+
+// Move `current` toward `target` by at most `maxDelta`.
+function approach(current, target, maxDelta) {
+  if (current < target) return Math.min(current + maxDelta, target);
+  if (current > target) return Math.max(current - maxDelta, target);
+  return current;
+}
 
 const LEVELS = [
   null,
@@ -97,7 +110,8 @@ export class GameScene extends Phaser.Scene {
     // Grant brief spawn-grace invuln so enemies right next to the spawn
     // can't hit the player on frame 1.
     this.isInvuln = true;
-    this.invulnTimer = INVULN_TIME;
+    this.invulnTimer = SPAWN_GRACE_INVULN;
+    this._jumpHeldLastFrame = false;
   }
 
   _buildBackground() {
@@ -387,16 +401,23 @@ export class GameScene extends Phaser.Scene {
       this.jumpBufferTimer = Math.max(0, this.jumpBufferTimer - dt * 1000);
     }
 
-    // Horizontal movement
-    if (inputState.left) {
-      body.setVelocityX(-RUN_SPEED);
-      this.bunny.setFlipX(true);
-    } else if (inputState.right) {
-      body.setVelocityX(RUN_SPEED);
-      this.bunny.setFlipX(false);
+    // Horizontal movement with momentum
+    const pressLeft = inputState.left;
+    const pressRight = inputState.right;
+    const targetVx = (pressLeft ? -RUN_SPEED : 0) + (pressRight ? RUN_SPEED : 0);
+    const pressing = pressLeft || pressRight;
+    let accel;
+    if (pressing) {
+      accel = onGround ? RUN_ACCEL_GROUND : RUN_ACCEL_AIR;
     } else {
-      body.setVelocityX(0);
+      accel = onGround ? FRICTION_GROUND : FRICTION_AIR;
     }
+    const newVx = approach(body.velocity.x, targetVx, accel * dt);
+    body.setVelocityX(newVx);
+
+    // Sprite flip follows last input direction (don't flip when idle)
+    if (pressLeft && !pressRight) this.bunny.setFlipX(true);
+    else if (pressRight && !pressLeft) this.bunny.setFlipX(false);
 
     // Jumping (coyote + buffer)
     const canJump = this.coyoteTimer > 0;
@@ -411,6 +432,14 @@ export class GameScene extends Phaser.Scene {
       // Dust on jump
       this.dustEmitter.explode(3, this.bunny.x, this.bunny.y + 8);
     }
+
+    // Variable jump height: if the player releases the jump key while still
+    // travelling upward, cap upward velocity so the hop is shorter.
+    const jumpHeldNow = inputState.jump;
+    if (this._jumpHeldLastFrame && !jumpHeldNow && body.velocity.y < JUMP_CUT_VELOCITY) {
+      body.setVelocityY(JUMP_CUT_VELOCITY);
+    }
+    this._jumpHeldLastFrame = jumpHeldNow;
 
     // Land detection
     if (!this.wasOnGround && onGround) {
@@ -531,7 +560,13 @@ export class GameScene extends Phaser.Scene {
 
       // Reset trigger so player can move through
       const trigger = this.puzzleTriggers.find(t => t.id === puzzleId);
-      if (trigger) trigger.triggered = true;
+      if (trigger) {
+        trigger.triggered = true;
+        // A solved puzzle also acts as a checkpoint so a fall after the
+        // door doesn't send the player all the way back to the start.
+        this.checkpointX = trigger.x;
+        this.checkpointY = trigger.y;
+      }
 
     } else {
       // Fail: lose 1 heart, allow retry

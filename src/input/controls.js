@@ -1,6 +1,11 @@
 /**
  * Unified input state for keyboard + touch.
- * Both sources write to the same inputState object.
+ * Both sources write into the same inputState object that GameScene reads.
+ *
+ * Touch model (set by UIScene):
+ *   _touchLeft / _touchRight: held while a finger is on that side of the screen
+ *   _touchJumpRequest: one-shot — set true on every pointerdown; consumed and
+ *     cleared by updateInput() so a single tap produces a single jump.
  */
 
 export const inputState = {
@@ -37,13 +42,20 @@ export function updateInput(scene) {
   inputState.left = kLeft || inputState._touchLeft || false;
   inputState.right = kRight || inputState._touchRight || false;
 
-  const jumpDown = kJump || inputState._touchJump || false;
+  // Held-jump (for variable-height jump cut on release)
+  const jumpDown = kJump || false;
   inputState.jump = jumpDown;
-  inputState.jumpPressed = jumpDown && !jumpWasDown;
+
+  // Single-frame jump-press: keyboard edge OR consumed touch-tap signal.
+  const keyboardEdge = jumpDown && !jumpWasDown;
+  const touchTap = inputState._touchJumpRequest === true;
+  inputState.jumpPressed = keyboardEdge || touchTap;
+  inputState._touchJumpRequest = false;
+
   jumpWasDown = jumpDown;
 }
 
 // Touch button state (set by UIScene)
 inputState._touchLeft = false;
 inputState._touchRight = false;
-inputState._touchJump = false;
+inputState._touchJumpRequest = false;

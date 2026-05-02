@@ -5,6 +5,7 @@
 
 let ctx = null;
 let muted = false;
+let unlocked = false;
 
 function getCtx() {
   if (!ctx) {
@@ -139,8 +140,21 @@ export const sfx = {
     return muted;
   },
 
-  // Call on first user gesture to unlock AudioContext
+  // Call from inside a real user-gesture handler (pointerdown / keydown) to
+  // unlock AudioContext on strict autoplay browsers. Plays a silent buffer
+  // so the context is fully started, not just resumed-but-unused.
   unlock() {
-    getCtx();
+    const ac = getCtx();
+    if (unlocked) return;
+    try {
+      const buffer = ac.createBuffer(1, 1, 22050);
+      const src = ac.createBufferSource();
+      src.buffer = buffer;
+      src.connect(ac.destination);
+      src.start(0);
+      unlocked = true;
+    } catch (e) {
+      // ignore — will retry on next gesture
+    }
   },
 };
