@@ -25,6 +25,14 @@ const INVULN_TIME = 1500;          // ms of invulnerability after hurt
 const SPAWN_GRACE_INVULN = 1500;   // ms of grace at level start
 const ENEMY_SPEED = 35;
 
+// Burrow tint colours by pair digit (`1`–`4`).
+const BURROW_TINTS = {
+  '1': 0x00bcd4, // cyan
+  '2': 0xe91e63, // magenta
+  '3': 0xffeb3b, // yellow
+  '4': 0xcddc39, // lime
+};
+
 // Move `current` toward `target` by at most `maxDelta`.
 function approach(current, target, maxDelta) {
   if (current < target) return Math.min(current + maxDelta, target);
@@ -97,6 +105,7 @@ export class GameScene extends Phaser.Scene {
       if (this.uiScene) {
         this.uiScene.setLives(this.lives);
         this.uiScene.setLevelName(this.levelConfig.name);
+        this.uiScene.setCarrotCount(this.collectedCarrots, this.smallCarrots.length);
       }
     });
 
@@ -214,6 +223,10 @@ export class GameScene extends Phaser.Scene {
     this.enemies = [];
     this.carrot = null;
     this.spikes = this.physics.add.staticGroup();
+    this.smallCarrots = [];
+    this.collectedCarrots = 0;
+    this.burrows = [];
+    this._pendingBurrowExit = false;
 
     specials.forEach(spec => {
       const { type, x, y, id } = spec;
@@ -225,6 +238,31 @@ export class GameScene extends Phaser.Scene {
         this.carrot.body.setImmovable(true);
         this.carrot.play('carrot_spin');
         this.carrot.setDepth(5);
+      } else if (type === 'small_carrot') {
+        // Small carrot collectible — reuses the carrot texture at a smaller
+        // scale, distinguished from the big exit carrot by a soft bob tween.
+        const sc = this.physics.add.sprite(x, y, 'carrot', 0);
+        sc.setScale(TILE_SCALE * 0.55);
+        sc.body.setAllowGravity(false);
+        sc.body.setImmovable(true);
+        sc.play('carrot_spin');
+        sc.setDepth(4);
+        // Gentle bob so they stand out as collectibles.
+        this.tweens.add({
+          targets: sc,
+          y: y - 4,
+          duration: 700 + Math.random() * 400,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
+        this.smallCarrots.push(sc);
+      } else if (type === 'burrow') {
+        const b = this.add.image(x, y, 'tile_burrow');
+        b.setScale(TILE_SCALE);
+        b.setDepth(2);
+        b.setTint(BURROW_TINTS[spec.pairId] || 0xffffff);
+        this.burrows.push({ sprite: b, x, y, target: spec.target });
       } else if (type === 'checkpoint') {
         const cp = this.add.sprite(x, y, 'tile_checkpoint_off');
         cp.setScale(TILE_SCALE);
@@ -357,12 +395,42 @@ export class GameScene extends Phaser.Scene {
       this._hurtBunny();
     });
 
+    // Bunny vs small carrots
+    if (this.smallCarrots.length > 0) {
+      this.physics.add.overlap(this.bunny, this.smallCarrots, (_b, sc) => {
+        this._collectSmallCarrot(sc);
+      });
+    }
+
     // Bunny vs carrot
     if (this.carrot) {
       this.physics.add.overlap(this.bunny, this.carrot, () => {
         this._collectCarrot();
       });
+      // Big carrot starts dim if there are small carrots to collect first.
+      this._refreshCarrotGate();
     }
+  }
+
+  _collectSmallCarrot(sc) {
+    if (!sc.active) return;
+    sc.disableBody(true, true);
+    this.collectedCarrots++;
+    sfx.play('collect');
+    if (this.sparkleEmitter) this.sparkleEmitter.explode(6, sc.x, sc.y);
+    if (this.uiScene) {
+      this.uiScene.setCarrotCount(this.collectedCarrots, this.smallCarrots.length);
+    }
+    this._refreshCarrotGate();
+  }
+
+  _refreshCarrotGate() {
+    if (!this.carrot) return;
+    const need = this.smallCarrots.length;
+    const got = this.collectedCarrots;
+    const ready = got >= need;
+    this.carrot.setAlpha(ready ? 1 : 0.45);
+    this.carrot.setTint(ready ? 0xffffff : 0x607d8b);
   }
 
   _setupCamera() {
@@ -384,7 +452,38 @@ export class GameScene extends Phaser.Scene {
     this._checkPuzzleTriggers();
     this._checkFallDeath();
     this._checkCheckpoints();
+    this._checkBurrows();
     this._updateInvuln(dt);
+  }
+
+  _checkBurrows() {
+    if (this.burrows.length === 0) return;
+    const HALF = TILE_SIZE / 2;
+    const bx = this.bunny.x;
+    const by = this.bunny.y;
+
+    let on = null;
+    for (const b of this.burrows) {
+      if (Math.abs(bx - b.x) < HALF && Math.abs(by - b.y) < HALF) { on = b; break; }
+    }
+    if (!on) {
+      // Bunny stepped off any burrow — re-arm so they can be teleported again.
+      this._pendingBurrowExit = false;
+      return;
+    }
+    // Suppress repeat teleport while still standing on the destination tile.
+    if (this._pendingBurrowExit) return;
+    // Lone burrow (no partner): nothing to do.
+    if (on.target.x === on.x && on.target.y === on.y) return;
+
+    this.bunny.setPosition(on.target.x, on.target.y);
+    this.bunny.body.setVelocity(0, 0);
+    this._pendingBurrowExit = true;
+    sfx.play('checkpoint');
+    if (this.sparkleEmitter) {
+      this.sparkleEmitter.explode(8, on.x, on.y);
+      this.sparkleEmitter.explode(8, on.target.x, on.target.y);
+    }
   }
 
   _updateBunny(dt) {
@@ -653,6 +752,16 @@ export class GameScene extends Phaser.Scene {
 
   _collectCarrot() {
     if (this.isWinning) return;
+    // Gate: must collect all small carrots first.
+    if (this.collectedCarrots < this.smallCarrots.length) {
+      if (!this._gateHintCooldown || this.time.now > this._gateHintCooldown) {
+        sfx.play('puzzleNo');
+        this._gateHintCooldown = this.time.now + 800;
+        const need = this.smallCarrots.length - this.collectedCarrots;
+        if (this.uiScene) this.uiScene.flashCarrotHint(need);
+      }
+      return;
+    }
     this.isWinning = true;
 
     sfx.play('collect');

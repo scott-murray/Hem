@@ -122,4 +122,26 @@ export function generateTileTextures(scene) {
   makeTexture(scene, 'tile_empty', TW, TH, (ctx) => {
     ctx.clearRect(0, 0, TW, TH);
   });
+
+  // Burrow / rabbit hole — drawn neutral (white). Each pair gets a setTint()
+  // at runtime so two paired burrows share a recognisable colour.
+  makeTexture(scene, 'tile_burrow', TW, TH, (ctx) => {
+    // Dirt mound base
+    ctx.fillStyle = PAL.GROUND;
+    ctx.fillRect(0, 8, TW, 8);
+    ctx.fillStyle = PAL.GROUND_SIDE;
+    ctx.fillRect(0, 7, TW, 1);
+    // Coloured ring (white, will be tinted at runtime)
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(3, 3, 10, 2);
+    ctx.fillRect(2, 4, 1, 6);
+    ctx.fillRect(13, 4, 1, 6);
+    ctx.fillRect(3, 9, 10, 2);
+    // Inner shadow (the hole)
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(4, 5, 8, 5);
+    // Tiny inner highlight
+    ctx.fillStyle = '#222';
+    ctx.fillRect(5, 5, 6, 1);
+  });
 }

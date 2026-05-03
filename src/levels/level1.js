@@ -1,8 +1,9 @@
 /**
- * Level 1: Tutorial - jump + 1 spelling puzzle
- * 30 columns × 16 rows
- * Tile size: 48px display (16px source × 3)
- * Level dimensions: 30×48 = 1440px wide, 16×48 = 768px tall
+ * Level 1: Carrot Valley — tutorial.
+ * 30 columns × 16 rows. No enemies. 3 small carrots gate the exit:
+ * - one at ground level (walk past)
+ * - one above the row-6 platform (climb left side)
+ * - one above the row-5 platform (climb right side)
  */
 
 // prettier-ignore
@@ -11,13 +12,13 @@ export const LEVEL1_MAP = [
   '                              ',
   '                              ',
   '                              ',
-  '                              ',
+  '           c           c      ',
   '                      PPP     ',
   '          PPP                 ',
   '             D                ',
   '    PPP      D    PPP         ',
   '             D                ',
-  'B         Q  D      K        C',
+  'B    c    Q  D      K        C',
   'TTT TTTTTTTTTTTTT TTTTTTTTTTTT',
   'GGG GGGGGGGGGGGGG GGGGGGGGGGGG',
   'GGG GGGGGGGGGGGGG GGGGGGGGGGGG',
@@ -28,7 +29,7 @@ export const LEVEL1_MAP = [
 export const LEVEL1_CONFIG = {
   number: 1,
   name: 'Carrot Valley',
-  puzzleTypes: ['spelling'],  // one spelling puzzle
+  puzzleTypes: ['spelling'],
   bgColor: 0x1a237e,
   groundColor: 0x4caf50,
 };

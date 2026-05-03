@@ -14,6 +14,8 @@ export class UIScene extends Phaser.Scene {
     this.levelName = '';
     this._hearts = [];
     this._isMobile = this._detectTouch();
+    this._carrotCount = 0;
+    this._carrotTotal = 0;
 
     // Track which finger is on which side, by Phaser pointer id, so two
     // simultaneous fingers (one per side) work correctly.
@@ -46,6 +48,40 @@ export class UIScene extends Phaser.Scene {
     }
   }
 
+  setCarrotCount(got, total) {
+    this._carrotCount = got;
+    this._carrotTotal = total;
+    if (!this._carrotText) return;
+    if (total === 0) {
+      this._carrotText.setVisible(false);
+      this._carrotIcon.setVisible(false);
+      return;
+    }
+    this._carrotText.setVisible(true);
+    this._carrotIcon.setVisible(true);
+    this._carrotText.setText(`${got}/${total}`);
+    // Tint full once complete
+    this._carrotText.setColor(got >= total ? '#ffd54f' : '#ffffff');
+  }
+
+  flashCarrotHint(need) {
+    if (!this._carrotText) return;
+    if (this._hintLabel) this._hintLabel.destroy();
+    this._hintLabel = this.add.text(W / 2, 26, `Need ${need} more carrot${need === 1 ? '' : 's'}!`, {
+      fontSize: '8px',
+      fontFamily: 'monospace',
+      color: '#ffd54f',
+      stroke: '#1a1a2e',
+      strokeThickness: 2,
+    }).setOrigin(0.5);
+    this.tweens.add({
+      targets: this._hintLabel,
+      alpha: 0,
+      duration: 1200,
+      onComplete: () => { if (this._hintLabel) { this._hintLabel.destroy(); this._hintLabel = null; } },
+    });
+  }
+
   _buildHUD() {
     // Semi-transparent top bar
     const bar = this.add.graphics();
@@ -64,6 +100,14 @@ export class UIScene extends Phaser.Scene {
       const heart = this.add.image(8 + i * 14, 9, 'heart_full').setOrigin(0, 0.5).setScale(1.5);
       this._hearts.push(heart);
     }
+
+    // Small carrot counter (just right of the hearts)
+    this._carrotIcon = this.add.image(56, 9, 'carrot', 0).setOrigin(0, 0.5).setScale(1.4).setVisible(false);
+    this._carrotText = this.add.text(70, 9, '', {
+      fontSize: '9px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+    }).setOrigin(0, 0.5).setVisible(false);
 
     // Fullscreen toggle (top-right)
     this._buildFullscreenBtn();
