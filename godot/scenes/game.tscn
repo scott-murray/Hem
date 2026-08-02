@@ -1,0 +1,44 @@
+[gd_scene load_steps=5 format=3 uid="uid://game000000000000000001"]
+
+[ext_resource type="Script" path="res://scripts/game_controller.gd" id="1_game"]
+[ext_resource type="Script" path="res://scripts/player.gd" id="2_player"]
+[ext_resource type="Script" path="res://scripts/touch_handler.gd" id="3_touch"]
+[ext_resource type="Script" path="res://scripts/game_ui.gd" id="4_ui"]
+
+[node name="Game" type="Node2D"]
+script = ExtResource("1_game")
+
+[node name="Background" type="ColorRect" parent="."]
+material = null  # set by game controller per-level
+
+[node name="GroundLayer" type="TileMapLayer" parent="."]
+
+[node name="Entities" type="Node2D" parent="."]
+
+[node name="Player" type="CharacterBody2D" parent="."]
+script = ExtResource("2_player")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player"]
+shape = SubResource("CircleShape2D_12x14")
+
+[node name="Sprite2D" type="Sprite2D" parent="Player"]
+
+[node name="Camera2D" type="Camera2D" parent="."]
+drag_left_margin = 80.0
+drag_right_margin = 80.0
+drag_top_margin = 40.0
+drag_bottom_margin = 40.0
+
+[node name="UI" type="CanvasLayer" parent="."]
+script = ExtResource("4_ui")
+
+[node name="TouchOverlay" type="Control" parent="UI"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 1  # MOUSE_FILTER_PASS
+script = ExtResource("3_touch")
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_12x14"]
+radius = 7.0

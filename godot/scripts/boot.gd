@@ -18,6 +18,4 @@ func _ready() -> void:
 		Progress.data.unlocked_level, Progress.data.muted,
 		Progress.data.has_dig_ability, Progress.data.broccolis
 	])
-	# Self-test (remove quit for normal gameplay):
-	#   print("[Boot] All systems initialised OK."); get_tree().quit(0)
-	# TODO: scene transition — get_tree().change_scene_to_file("res://scenes/start_screen.tscn")
+	get_tree().change_scene_to_file.call_deferred("res://scenes/start_screen.tscn")
