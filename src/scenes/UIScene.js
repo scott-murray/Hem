@@ -17,17 +17,10 @@ export class UIScene extends Phaser.Scene {
     this._carrotCount = 0;
     this._carrotTotal = 0;
     this._hasDigAbility = false;
-
-    // Track which pointer is on which walk zone.
     this._walkSideForPointer = new Map();
-    // Track whether a walk has already been activated for this pointer.
-    this._walkActivated = new Set();
 
     this._buildHUD();
-
-    if (this._isMobile) {
-      this._buildTouchZones();
-    }
+    this._buildTouchZones();
 
     this.events.on('shutdown', this._cleanup, this);
   }
@@ -38,16 +31,12 @@ export class UIScene extends Phaser.Scene {
 
   setLives(n) {
     this.lives = n;
-    if (this._hearts && this._hearts.length > 0) {
-      this._updateHearts();
-    }
+    if (this._hearts && this._hearts.length > 0) this._updateHearts();
   }
 
   setLevelName(name) {
     this.levelName = name;
-    if (this._levelNameText) {
-      this._levelNameText.setText(name);
-    }
+    if (this._levelNameText) this._levelNameText.setText(name);
   }
 
   setBroccoliCount(got) {
@@ -83,21 +72,15 @@ export class UIScene extends Phaser.Scene {
     if (!this._carrotText) return;
     if (this._hintLabel) this._hintLabel.destroy();
     this._hintLabel = this.add.text(W / 2, 26, `Need ${need} more carrot${need === 1 ? '' : 's'}!`, {
-      fontSize: '8px',
-      fontFamily: 'monospace',
-      color: '#ffd54f',
-      stroke: '#1a1a2e',
-      strokeThickness: 2,
+      fontSize: '8px', fontFamily: 'monospace', color: '#ffd54f',
+      stroke: '#1a1a2e', strokeThickness: 2,
     }).setOrigin(0.5);
     this.tweens.add({
-      targets: this._hintLabel,
-      alpha: 0,
-      duration: 1200,
+      targets: this._hintLabel, alpha: 0, duration: 1200,
       onComplete: () => { if (this._hintLabel) { this._hintLabel.destroy(); this._hintLabel = null; } },
     });
   }
 
-  /** Called by GameScene when the dig ability is unlocked. */
   showDigButton() {
     if (this._hasDigAbility || !this._isMobile) return;
     this._hasDigAbility = true;
@@ -105,41 +88,29 @@ export class UIScene extends Phaser.Scene {
   }
 
   _buildHUD() {
-    // Semi-transparent top bar
     const bar = this.add.graphics();
     bar.fillStyle(0x000000, 0.4);
     bar.fillRect(0, 0, W, 18);
 
-    // Level name
     this._levelNameText = this.add.text(W / 2, 9, '', {
-      fontSize: '9px',
-      fontFamily: 'monospace',
-      color: '#ffffff',
+      fontSize: '9px', fontFamily: 'monospace', color: '#ffffff',
     }).setOrigin(0.5);
 
-    // Hearts (top-left)
     for (let i = 0; i < 3; i++) {
       const heart = this.add.image(8 + i * 14, 9, 'heart_full').setOrigin(0, 0.5).setScale(1.5);
       this._hearts.push(heart);
     }
 
-    // Small carrot counter (just right of the hearts)
     this._carrotIcon = this.add.image(56, 9, 'carrot', 0).setOrigin(0, 0.5).setScale(1.4).setVisible(false);
     this._carrotText = this.add.text(70, 9, '', {
-      fontSize: '9px',
-      fontFamily: 'monospace',
-      color: '#ffffff',
+      fontSize: '9px', fontFamily: 'monospace', color: '#ffffff',
     }).setOrigin(0, 0.5).setVisible(false);
 
-    // Broccoli counter (right of carrot counter, only shows when >0)
     this._broccoliIcon = this.add.image(104, 9, 'broccoli', 0).setOrigin(0, 0.5).setScale(1.4).setVisible(false);
     this._broccoliText = this.add.text(118, 9, '', {
-      fontSize: '9px',
-      fontFamily: 'monospace',
-      color: '#ffd54f',
+      fontSize: '9px', fontFamily: 'monospace', color: '#ffd54f',
     }).setOrigin(0, 0.5).setVisible(false);
 
-    // Fullscreen toggle (top-right)
     this._buildFullscreenBtn();
   }
 
@@ -150,23 +121,13 @@ export class UIScene extends Phaser.Scene {
   }
 
   _buildFullscreenBtn() {
-    const w = 30;
-    const h = 14;
-    const x = W - w - 4;
-    const y = 2;
-
+    const w = 30, h = 14, x = W - w - 4, y = 2;
     const g = this.add.graphics();
-    g.fillStyle(0x37474f, 0.6);
-    g.fillRect(x, y, w, h);
-    g.lineStyle(1, 0x78909c, 0.6);
-    g.strokeRect(x, y, w, h);
-
+    g.fillStyle(0x37474f, 0.6); g.fillRect(x, y, w, h);
+    g.lineStyle(1, 0x78909c, 0.6); g.strokeRect(x, y, w, h);
     this._fsLabel = this.add.text(x + w / 2, y + h / 2, '⛶ FS', {
-      fontSize: '7px',
-      fontFamily: 'monospace',
-      color: '#cfd8dc',
+      fontSize: '7px', fontFamily: 'monospace', color: '#cfd8dc',
     }).setOrigin(0.5);
-
     const zone = this.add.zone(x, y, w, h).setOrigin(0, 0).setInteractive();
     zone.on('pointerdown', (pointer, _x, _y, event) => {
       if (event && event.stopPropagation) event.stopPropagation();
@@ -175,113 +136,89 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  // ── Swipe-based touch layout ────────────────────────────────────────
+  // --- Touch layout -------------------------------------------------------
   //
-  //   ┌──────────────────────────────────┐
-  //   │                                  │
-  //   │     WALK LEFT    WALK RIGHT      │  hold (>120ms) = walk
-  //   │     (hold)        (hold)         │
-  //   │                                  │
-  //   │         SWIPE ↑ = JUMP           │  flick up anywhere
-  //   │         SWIPE ↓ = DIG            │  flick down anywhere
-  //   │                                  │
-  //   │      TAP (quick) = JUMP          │  tap without holding
-  //   └──────────────────────────────────┘
+  // Full-screen gesture surface. No separate jump strip or dig button.
   //
-  // Decouples walk from jump. Swipe gestures replace the old jump strip
-  // and dig button — more intuitive on mobile.
+  //   Left half  (hold >120ms) = walk left
+  //   Right half (hold >120ms) = walk right
+  //   Swipe up   (>30px)       = jump
+  //   Swipe down (>30px)       = dig
+  //   Quick tap  (<120ms)      = jump in place
+  //
+  // Decision is made at pointerup time by comparing start position,
+  // end position, and hold duration. No timers -- avoids race conditions.
 
   _buildTouchZones() {
     const HUD_H = 18;
     const WALK_MID = W / 2;
-    const TAP_THRESHOLD = 120;            // ms — shorter = tap, longer = walk
-    const SWIPE_THRESHOLD = 30;           // px — minimum vertical movement for swipe
+    const TAP_THRESHOLD = 120;       // ms
+    const SWIPE_THRESHOLD = 30;      // px
 
-    // Track pointer start positions for swipe detection
-    const pointerStart = new Map();       // pointerId → {x, y, time}
+    const pointerStart = new Map();  // pointerId -> {x, y, time}
 
-    // ── Walk zones (left / right, full height) ────────────────────────
-
-    const walkLeftZone = this.add.zone(0, HUD_H, WALK_MID, H - HUD_H).setOrigin(0, 0).setInteractive();
+    // Walk zones (full height)
+    const walkLeftZone  = this.add.zone(0, HUD_H, WALK_MID, H - HUD_H).setOrigin(0, 0).setInteractive();
     const walkRightZone = this.add.zone(WALK_MID, HUD_H, WALK_MID, H - HUD_H).setOrigin(0, 0).setInteractive();
 
-    // Faint tint
+    // Faint tint for discoverability
     const tint = this.add.graphics();
-    tint.fillStyle(0xffffff, 0.03);
-    tint.fillRect(0, HUD_H, WALK_MID, H - HUD_H);
-    tint.fillStyle(0x000000, 0.03);
-    tint.fillRect(WALK_MID, HUD_H, WALK_MID, H - HUD_H);
+    tint.fillStyle(0xffffff, 0.03); tint.fillRect(0, HUD_H, WALK_MID, H - HUD_H);
+    tint.fillStyle(0x000000, 0.03); tint.fillRect(WALK_MID, HUD_H, WALK_MID, H - HUD_H);
     tint.setDepth(-1);
 
-    // Hint glyphs
-    this.add.text(60, H - 20, '◀ HOLD', {
+    this.add.text(60, H - 20, '< HOLD', {
       fontSize: '7px', fontFamily: 'monospace', color: '#ffffff',
     }).setOrigin(0.5).setAlpha(0.25);
-    this.add.text(W - 60, H - 20, 'HOLD ▶', {
+    this.add.text(W - 60, H - 20, 'HOLD >', {
       fontSize: '7px', fontFamily: 'monospace', color: '#ffffff',
     }).setOrigin(0.5).setAlpha(0.25);
-    this.add.text(W / 2, H - 8, '↑ JUMP · ↓ DIG', {
+    this.add.text(W / 2, H - 8, 'swipe up = jump  |  swipe down = dig', {
       fontSize: '7px', fontFamily: 'monospace', color: '#ffffff',
-    }).setOrigin(0.5).setAlpha(0.2);
+    }).setOrigin(0.5).setAlpha(0.18);
 
-    // ── Pointer handlers ──────────────────────────────────────────────
-
-    const holdTimers = new Map(); // pointerId → Phaser.Time.TimerEvent
+    // --- Handlers --------------------------------------------------------
 
     const pointerDown = (side) => (pointer) => {
       pointerStart.set(pointer.id, { x: pointer.x, y: pointer.y, time: this.time.now });
       this._walkSideForPointer.set(pointer.id, side);
-      this._walkActivated.delete(pointer.id);
-
-      // Start hold timer: if it fires before pointerup, this is a walk
-      const timer = this.time.delayedCall(TAP_THRESHOLD, () => {
-        this._walkActivated.add(pointer.id);
-        if (side === 'left') inputState._touchLeft = true;
-        else if (side === 'right') inputState._touchRight = true;
-      });
-      holdTimers.set(pointer.id, timer);
     };
 
     const pointerUp = (side) => (pointer) => {
       const start = pointerStart.get(pointer.id);
       pointerStart.delete(pointer.id);
 
-      // Cancel hold timer
-      const timer = holdTimers.get(pointer.id);
-      if (timer) { timer.destroy(); holdTimers.delete(pointer.id); }
-
-      // Release walk
+      // Release walk for this pointer
       this._walkSideForPointer.delete(pointer.id);
-      const stillLeft = [...this._walkSideForPointer.values()].includes('left');
+      const stillLeft  = [...this._walkSideForPointer.values()].includes('left');
       const stillRight = [...this._walkSideForPointer.values()].includes('right');
-      inputState._touchLeft = stillLeft;
+      inputState._touchLeft  = stillLeft;
       inputState._touchRight = stillRight;
 
-      // Detect swipe vs tap
-      if (start && !this._walkActivated.has(pointer.id)) {
-        const dy = pointer.y - start.y;
-        const dx = pointer.x - start.x;
-        const absDx = Math.abs(dx);
-        const absDy = Math.abs(dy);
+      if (!start) return;
 
-        if (absDy > SWIPE_THRESHOLD && absDy > absDx) {
-          // Vertical swipe
-          if (dy < 0) {
-            // Swipe UP → jump
-            inputState._touchJump = true;
-          } else {
-            // Swipe DOWN → dig
-            const gs = this.scene.get('GameScene');
-            if (gs && gs._tryDig) gs._tryDig();
-          }
-        } else if (absDx < SWIPE_THRESHOLD && absDy < SWIPE_THRESHOLD) {
-          // Stationary quick tap → jump
+      const dy = pointer.y - start.y;
+      const dx = pointer.x - start.x;
+      const absDy = Math.abs(dy);
+      const absDx = Math.abs(dx);
+      const duration = this.time.now - start.time;
+
+      if (absDy > SWIPE_THRESHOLD && absDy > absDx) {
+        // Vertical swipe
+        if (dy < 0) {
           inputState._touchJump = true;
+        } else {
+          const gs = this.scene.get('GameScene');
+          if (gs && gs._tryDig) gs._tryDig();
         }
-        // If horizontal movement > threshold, it's a drag — ignore
+      } else if (duration >= TAP_THRESHOLD && absDx < SWIPE_THRESHOLD && absDy < SWIPE_THRESHOLD) {
+        // Stationary hold -> walk
+        if (side === 'left')  inputState._touchLeft  = true;
+        if (side === 'right') inputState._touchRight = true;
+      } else if (absDx < SWIPE_THRESHOLD && absDy < SWIPE_THRESHOLD) {
+        // Quick tap -> jump
+        inputState._touchJump = true;
       }
-
-      this._walkActivated.delete(pointer.id);
     };
 
     walkLeftZone.on('pointerdown', pointerDown('left'));
@@ -289,7 +226,7 @@ export class UIScene extends Phaser.Scene {
     walkLeftZone.on('pointerup', pointerUp('left'));
     walkRightZone.on('pointerup', pointerUp('right'));
 
-    // Global cleanup — releasing off-zone still ends the gesture
+    // Global listeners so releasing off-zone still cleans up
     this.input.on('pointerup', (pointer) => {
       const side = this._walkSideForPointer.get(pointer.id);
       if (side) pointerUp(side)(pointer);
@@ -300,43 +237,32 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  // ── Dig button (appears after dig ability unlocked) ──────────────────
+  // --- Dig button (mobile only, appears after ability unlocked) ----------
 
   _buildDigButton() {
     if (this._digBtn) return;
-    const bw = 40;
-    const bh = 26;
-    const bx = W - 44;
-    const by = H - 70;
-
+    const bw = 40, bh = 26, bx = W - 44, by = H - 70;
     const g = this.add.graphics();
     this._digBtnG = g;
-    g.fillStyle(0x4e342e, 0.85);
-    g.fillRect(bx, by, bw, bh);
-    g.lineStyle(2, 0x8d6e63, 1);
-    g.strokeRect(bx, by, bw, bh);
-
-    this.add.text(bx + bw / 2, by + bh / 2, '⛏ DIG', {
+    g.fillStyle(0x4e342e, 0.85); g.fillRect(bx, by, bw, bh);
+    g.lineStyle(2, 0x8d6e63, 1); g.strokeRect(bx, by, bw, bh);
+    this.add.text(bx + bw / 2, by + bh / 2, 'DIG', {
       fontSize: '8px', fontFamily: 'monospace', color: '#ffcc80',
     }).setOrigin(0.5);
-
     const zone = this.add.zone(bx, by, bw, bh).setOrigin(0, 0).setInteractive();
     zone.on('pointerdown', () => {
-      // Signal a dig action via the GameScene
       const gs = this.scene.get('GameScene');
       if (gs && gs._tryDig) gs._tryDig();
     });
-
     this._digBtn = true;
   }
 
-  // ── Cleanup ─────────────────────────────────────────────────────────
+  // --- Cleanup -----------------------------------------------------------
 
   _cleanup() {
-    inputState._touchLeft = false;
+    inputState._touchLeft  = false;
     inputState._touchRight = false;
-    inputState._touchJump = false;
+    inputState._touchJump  = false;
     this._walkSideForPointer.clear();
-    this._walkActivated.clear();
   }
 }
