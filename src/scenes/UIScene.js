@@ -138,30 +138,27 @@ export class UIScene extends Phaser.Scene {
 
   // --- Touch layout -------------------------------------------------------
   //
-  // Full-screen gesture surface. No separate jump strip or dig button.
+  //   Press left half  -> walk left  (stops on release)
+  //   Press right half -> walk right (stops on release)
+  //   Swipe up (>30px) -> jump (while continuing to walk)
+  //   Swipe down       -> dig  (while continuing to walk)
   //
-  //   Left half  (hold >120ms) = walk left
-  //   Right half (hold >120ms) = walk right
-  //   Swipe up   (>30px)       = jump
-  //   Swipe down (>30px)       = dig
-  //   Quick tap  (<120ms)      = jump in place
-  //
-  // Decision is made at pointerup time by comparing start position,
-  // end position, and hold duration. No timers -- avoids race conditions.
+  // Walk starts immediately on press and stops on release.
+  // Jump/dig are triggered during movement, not on release.
 
   _buildTouchZones() {
     const HUD_H = 18;
     const WALK_MID = W / 2;
-    const TAP_THRESHOLD = 120;       // ms
-    const SWIPE_THRESHOLD = 30;      // px
+    const SWIPE_THRESHOLD = 30;      // px of vertical movement to trigger jump/dig
 
-    const pointerStart = new Map();  // pointerId -> {x, y, time}
+    const pointerStartY = new Map();  // pointerId -> last y (for swipe detection)
+    const pointerJumped = new Set();  // pointerIds that already triggered a jump
 
     // Walk zones (full height)
     const walkLeftZone  = this.add.zone(0, HUD_H, WALK_MID, H - HUD_H).setOrigin(0, 0).setInteractive();
     const walkRightZone = this.add.zone(WALK_MID, HUD_H, WALK_MID, H - HUD_H).setOrigin(0, 0).setInteractive();
 
-    // Faint tint for discoverability
+    // Faint tint
     const tint = this.add.graphics();
     tint.fillStyle(0xffffff, 0.03); tint.fillRect(0, HUD_H, WALK_MID, H - HUD_H);
     tint.fillStyle(0x000000, 0.03); tint.fillRect(WALK_MID, HUD_H, WALK_MID, H - HUD_H);
@@ -180,53 +177,56 @@ export class UIScene extends Phaser.Scene {
     // --- Handlers --------------------------------------------------------
 
     const pointerDown = (side) => (pointer) => {
-      pointerStart.set(pointer.id, { x: pointer.x, y: pointer.y, time: this.time.now });
+      // Start walking immediately
+      if (side === 'left')  inputState._touchLeft  = true;
+      if (side === 'right') inputState._touchRight = true;
+      pointerStartY.set(pointer.id, pointer.y);
+      pointerJumped.delete(pointer.id);
       this._walkSideForPointer.set(pointer.id, side);
     };
 
-    const pointerUp = (side) => (pointer) => {
-      const start = pointerStart.get(pointer.id);
-      pointerStart.delete(pointer.id);
+    const pointerMove = (pointer) => {
+      const startY = pointerStartY.get(pointer.id);
+      if (startY === undefined) return;
+      const dy = startY - pointer.y;  // positive = upward
+      const absDy = Math.abs(dy);
 
-      // Release walk for this pointer
+      if (absDy > SWIPE_THRESHOLD && !pointerJumped.has(pointer.id)) {
+        pointerJumped.add(pointer.id);
+        if (dy > 0) {
+          // Swipe up -> jump
+          inputState._touchJump = true;
+        } else {
+          // Swipe down -> dig
+          const gs = this.scene.get('GameScene');
+          if (gs && gs._tryDig) gs._tryDig();
+        }
+        // Reset baseline so another swipe can trigger again
+        pointerStartY.set(pointer.id, pointer.y);
+      }
+    };
+
+    const pointerUp = (side) => (pointer) => {
+      // Stop walking for this pointer
       this._walkSideForPointer.delete(pointer.id);
       const stillLeft  = [...this._walkSideForPointer.values()].includes('left');
       const stillRight = [...this._walkSideForPointer.values()].includes('right');
       inputState._touchLeft  = stillLeft;
       inputState._touchRight = stillRight;
 
-      if (!start) return;
-
-      const dy = pointer.y - start.y;
-      const dx = pointer.x - start.x;
-      const absDy = Math.abs(dy);
-      const absDx = Math.abs(dx);
-      const duration = this.time.now - start.time;
-
-      if (absDy > SWIPE_THRESHOLD && absDy > absDx) {
-        // Vertical swipe
-        if (dy < 0) {
-          inputState._touchJump = true;
-        } else {
-          const gs = this.scene.get('GameScene');
-          if (gs && gs._tryDig) gs._tryDig();
-        }
-      } else if (duration >= TAP_THRESHOLD && absDx < SWIPE_THRESHOLD && absDy < SWIPE_THRESHOLD) {
-        // Stationary hold -> walk
-        if (side === 'left')  inputState._touchLeft  = true;
-        if (side === 'right') inputState._touchRight = true;
-      } else if (absDx < SWIPE_THRESHOLD && absDy < SWIPE_THRESHOLD) {
-        // Quick tap -> jump
-        inputState._touchJump = true;
-      }
+      pointerStartY.delete(pointer.id);
+      pointerJumped.delete(pointer.id);
     };
 
     walkLeftZone.on('pointerdown', pointerDown('left'));
     walkRightZone.on('pointerdown', pointerDown('right'));
+    walkLeftZone.on('pointermove', pointerMove);
+    walkRightZone.on('pointermove', pointerMove);
     walkLeftZone.on('pointerup', pointerUp('left'));
     walkRightZone.on('pointerup', pointerUp('right'));
 
-    // Global listeners so releasing off-zone still cleans up
+    // Global listeners so off-zone release / move still works
+    this.input.on('pointermove', pointerMove);
     this.input.on('pointerup', (pointer) => {
       const side = this._walkSideForPointer.get(pointer.id);
       if (side) pointerUp(side)(pointer);
