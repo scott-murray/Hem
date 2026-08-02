@@ -1,31 +1,40 @@
 /**
- * Level 3: Crystal Caves — both puzzle types, two enemies, and 5 small
- * carrots for the treasure-hunt feel. 42 columns × 18 rows.
+ * Level 3: Crystal Caves — both puzzle types, two enemies, burrow teleporters,
+ * and 5 small carrots spread across three platform sections.
+ * 42 columns × 18 rows.
  *
- * Carrots are scattered across the platform sequences so the player has to
- * climb both sides of the level rather than just running along the ground.
+ * Jump physics: ~3.2 tile max height. All gaps ≤ 3 tiles.
+ *
+ * Layout:
+ *   Left section: platforms + 2 carrots (reachable before first door)
+ *   Middle section: platform + carrot (between the two doors)
+ *   Right section: platforms + carrots + exit (reachable after both doors)
+ *   Puzzle 1 (spelling, col 12) → left door (col 17)
+ *   Puzzle 2 (math, col 25)    → right door (col 26)
+ *   Enemies: fox (col 2), beetle (col 22), fox (col 34)
+ *   2 checkpoints
  */
 
 // prettier-ignore
 export const LEVEL3_MAP = [
   '                                          ',
-  '            c          PPP   c            ',
-  '             PPP       PPP                ',
-  '   PPP             c         PPP          ',
-  '                  PPP             c       ',
-  '         PPP                     PPP      ',
   '                                          ',
-  '            D                D            ',
-  '   c        D                D            ',
-  '  PPP       D                D            ',
-  'B   F    Q  D   K   E     Q  D   K  F    C',
-  'TTTTTTTTTTTTTT TTTTTTTTTTTTTTTT TTTTTTTTTT',
-  'GGGGGGGGGGGGGG GGGGGGGGGGGGGGGG GGGGGGGGGG',
-  'GGGGGGGGGGGGGG GGGGGGGGGGGGGGGG GGGGGGGGGG',
-  'GGGGGGGGGGGGGG GGGGGGGGGGGGGGGG GGGGGGGGGG',
-  'GGGGGGGGGGGGGG GGGGGGGGGGGGGGGG GGGGGGGGGG',
-  'GGGGGGGGGGGGGG GGGGGGGGGGGGGGGG GGGGGGGGGG',
-  'GGGGGGGGGGGGGG GGGGGGGGGGGGGGGG GGGGGGGGGG',
+  '                             c            ',
+  '    c                                     ',
+  '                            PPP           ',
+  '   PPP                                    ',
+  '       c                                  ',
+  '      PPP              c      PPP         ',
+  '                                          ',
+  '   PPP           D    PPP D   PPP         ',
+  '                 D        D               ',
+  'B F c       Q    D  K E  QD    K  F     C ',
+  'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
+  'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+  'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+  'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+  'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+  'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
 ];
 
 export const LEVEL3_CONFIG = {

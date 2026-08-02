@@ -69,6 +69,8 @@ let scheduler = null;
 let stepIdx = 0;
 let nextStepTime = 0;
 let masterGain = null;
+let _startRetries = 0;
+const MAX_START_RETRIES = 20;  // retry for up to ~2 seconds
 
 function makeMaster(ac) {
   const g = ac.createGain();
@@ -184,6 +186,15 @@ function scheduleStep(ac, track, step, when, dest) {
 function startScheduler() {
   if (scheduler) return;
   const ac = getCtx();
+  if (ac.state !== 'running') {
+    // Context still suspended — retry shortly (e.g. unlock hasn't completed yet)
+    if (_startRetries < MAX_START_RETRIES) {
+      _startRetries++;
+      setTimeout(() => startScheduler(), 100);
+    }
+    return;
+  }
+  _startRetries = 0;
   if (!masterGain) masterGain = makeMaster(ac);
   stepIdx = 0;
   nextStepTime = ac.currentTime + 0.05;

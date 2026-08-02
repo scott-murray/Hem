@@ -15,7 +15,7 @@ export function getCtx() {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
   }
   if (ctx.state === 'suspended') {
-    ctx.resume();
+    ctx.resume().catch(() => { /* ignore — will retry on next gesture */ });
   }
   return ctx;
 }
@@ -33,11 +33,14 @@ export function unlock() {
   const ac = getCtx();
   if (unlocked) return;
   try {
-    const buffer = ac.createBuffer(1, 1, 22050);
+    // Use a short, non-zero buffer to force the context to start.
+    // `start()` with no argument defaults to currentTime, avoiding
+    // edge cases where `start(0)` is scheduled in the distant past.
+    const buffer = ac.createBuffer(1, 1, ac.sampleRate);
     const src = ac.createBufferSource();
     src.buffer = buffer;
     src.connect(ac.destination);
-    src.start(0);
+    src.start();
     unlocked = true;
     onUnlockCallbacks.splice(0).forEach(cb => {
       try { cb(); } catch (e) { /* ignore */ }

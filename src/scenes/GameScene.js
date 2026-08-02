@@ -12,8 +12,8 @@ const W = 480;
 const H = 270;
 
 const GRAVITY = 1100;
-const JUMP_VELOCITY = -480;
-const JUMP_CUT_VELOCITY = -160;   // upward speed cap when jump released early
+const JUMP_VELOCITY = -580;
+const JUMP_CUT_VELOCITY = -220;   // upward speed cap when jump released early
 const RUN_SPEED = 150;
 const RUN_ACCEL_GROUND = 1500;    // px/s² while pressing a direction on ground
 const RUN_ACCEL_AIR = 600;        // px/s² while pressing a direction in air
