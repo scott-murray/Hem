@@ -1,5 +1,5 @@
 /**
- * Level 3: Crystal Caves — both puzzle types, two enemies, burrow teleporters,
+ * Level 3: Crystal Caves — both puzzle types, two enemies,
  * and 5 small carrots spread across three platform sections.
  * 42 columns × 18 rows.
  *
@@ -11,6 +11,7 @@
  *   Right section: platforms + carrots + exit (reachable after both doors)
  *   Puzzle 1 (spelling, col 12) → left door (col 17)
  *   Puzzle 2 (math, col 25)    → right door (col 26)
+ *   X tiles: diggable shortcuts (requires dig ability from Level 2)
  *   Enemies: fox (col 2), beetle (col 22), fox (col 34)
  *   2 checkpoints
  */
@@ -26,9 +27,9 @@ export const LEVEL3_MAP = [
   '       c                                  ',
   '      PPP              c      PPP         ',
   '                                          ',
-  '   PPP           D    PPP D   PPP         ',
+  '   PPP           D    PPP D   PPP        ',
   '                 D        D               ',
-  'B F c       Q    D  K E  QD    K  F     C ',
+  'B F c       Q    D  K E  QD    K  F X   C ',
   'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
   'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
   'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
@@ -41,6 +42,9 @@ export const LEVEL3_CONFIG = {
   number: 3,
   name: 'Crystal Caves',
   puzzleTypes: ['spelling', 'math'],
-  bgColor: 0x0d1b2a,
-  groundColor: 0x546e7a,
+  bgColor: 0x311b92,
+  bgColorTop: 0x311b92,
+  bgColorBot: 0x4527a0,
+  groundColor: 0x37474f,
+  starColor: 0xb39ddb,
 };

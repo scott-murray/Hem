@@ -16,10 +16,12 @@ export class UIScene extends Phaser.Scene {
     this._isMobile = this._detectTouch();
     this._carrotCount = 0;
     this._carrotTotal = 0;
+    this._hasDigAbility = false;
 
-    // Track which finger is on which side, by Phaser pointer id, so two
-    // simultaneous fingers (one per side) work correctly.
-    this._sideForPointer = new Map();
+    // Track which pointer is on which walk zone.
+    this._walkSideForPointer = new Map();
+    // Track whether a walk has already been activated for this pointer.
+    this._walkActivated = new Set();
 
     this._buildHUD();
 
@@ -60,7 +62,6 @@ export class UIScene extends Phaser.Scene {
     this._carrotText.setVisible(true);
     this._carrotIcon.setVisible(true);
     this._carrotText.setText(`${got}/${total}`);
-    // Tint full once complete
     this._carrotText.setColor(got >= total ? '#ffd54f' : '#ffffff');
   }
 
@@ -80,6 +81,13 @@ export class UIScene extends Phaser.Scene {
       duration: 1200,
       onComplete: () => { if (this._hintLabel) { this._hintLabel.destroy(); this._hintLabel = null; } },
     });
+  }
+
+  /** Called by GameScene when the dig ability is unlocked. */
+  showDigButton() {
+    if (this._hasDigAbility || !this._isMobile) return;
+    this._hasDigAbility = true;
+    this._buildDigButton();
   }
 
   _buildHUD() {
@@ -145,71 +153,163 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  _buildTouchZones() {
-    // Two invisible (faintly-tinted) zones covering left and right halves of
-    // the canvas. Holding a side moves that direction; every pointerdown also
-    // fires a one-shot jump so kids can play one-handed.
-    const leftZone = this.add.zone(0, 18, W / 2, H - 18).setOrigin(0, 0).setInteractive();
-    const rightZone = this.add.zone(W / 2, 18, W / 2, H - 18).setOrigin(0, 0).setInteractive();
+  // ── Three-zone touch layout ───────────────────────────────────────────
+  //
+  //   ┌──────────────────────────────────┐
+  //   │                                  │
+  //   │     WALK LEFT    WALK RIGHT      │  hold (>120ms) = walk
+  //   │     (hold)        (hold)         │  tap  (<120ms) = jump in place
+  //   │                                  │
+  //   ├──────────────────────────────────┤  y = H * 0.78
+  //   │           ══ JUMP ══            │  tap = jump (always)
+  //   └──────────────────────────────────┘
+  //
+  // This decouples walk from jump so a kid can walk without accidental hops.
 
-    // Faint edge gradient so the touch areas are discoverable without
-    // dominating the playfield.
+  _buildTouchZones() {
+    const HUD_H = 18;
+    const JUMP_TOP = Math.floor(H * 0.78);   // top of jump strip
+    const WALK_MID = W / 2;                    // divide left/right walk zones
+    const TAP_THRESHOLD = 120;                 // ms — shorter = tap, longer = walk
+
+    // ── Walk zones (left / right) ─────────────────────────────────────
+
+    const walkLeftZone = this.add.zone(0, HUD_H, WALK_MID, JUMP_TOP - HUD_H).setOrigin(0, 0).setInteractive();
+    const walkRightZone = this.add.zone(WALK_MID, HUD_H, WALK_MID, JUMP_TOP - HUD_H).setOrigin(0, 0).setInteractive();
+
+    // Faint tint for discoverability
     const tint = this.add.graphics();
-    tint.fillStyle(0xffffff, 0.04);
-    tint.fillRect(0, 18, W / 2, H - 18);
-    tint.fillStyle(0x000000, 0.04);
-    tint.fillRect(W / 2, 18, W / 2, H - 18);
+    tint.fillStyle(0xffffff, 0.03);
+    tint.fillRect(0, HUD_H, WALK_MID, JUMP_TOP - HUD_H);
+    tint.fillStyle(0x000000, 0.03);
+    tint.fillRect(WALK_MID, HUD_H, WALK_MID, JUMP_TOP - HUD_H);
     tint.setDepth(-1);
 
-    // Hint glyphs (low alpha)
-    this.add.text(40, H - 20, '◀ HOLD', {
-      fontSize: '7px',
-      fontFamily: 'monospace',
-      color: '#ffffff',
-    }).setOrigin(0, 0.5).setAlpha(0.35);
-    this.add.text(W - 40, H - 20, 'HOLD ▶', {
-      fontSize: '7px',
-      fontFamily: 'monospace',
-      color: '#ffffff',
-    }).setOrigin(1, 0.5).setAlpha(0.35);
-    this.add.text(W / 2, H - 32, 'TAP TO JUMP', {
-      fontSize: '7px',
-      fontFamily: 'monospace',
-      color: '#ffffff',
-    }).setOrigin(0.5).setAlpha(0.3);
+    // Walk-zone hint glyphs
+    this.add.text(60, JUMP_TOP - 14, '◀ HOLD', {
+      fontSize: '7px', fontFamily: 'monospace', color: '#ffffff',
+    }).setOrigin(0.5).setAlpha(0.25);
+    this.add.text(W - 60, JUMP_TOP - 14, 'HOLD ▶', {
+      fontSize: '7px', fontFamily: 'monospace', color: '#ffffff',
+    }).setOrigin(0.5).setAlpha(0.25);
 
-    const downHandler = (side) => (pointer) => {
-      this._sideForPointer.set(pointer.id, side);
-      if (side === 'left') inputState._touchLeft = true;
-      else inputState._touchRight = true;
-      // One-shot jump request — every tap-down also tries to jump
-      inputState._touchJumpRequest = true;
+    // ── Walk-zone handlers ────────────────────────────────────────────
+    // Use delayed-call timers for tap-vs-hold detection.
+    // On pointerdown, start a timer. If the timer fires (hold ≥ threshold),
+    // activate walk. On pointerup before the timer fires, treat as a tap.
+
+    const holdTimers = new Map(); // pointerId → Phaser.Time.TimerEvent
+
+    const walkDown = (side) => (pointer) => {
+      this._walkSideForPointer.set(pointer.id, side);
+      this._walkActivated.delete(pointer.id);
+
+      // Start hold timer: if it fires before pointerup, this is a walk
+      const timer = this.time.delayedCall(TAP_THRESHOLD, () => {
+        this._walkActivated.add(pointer.id);
+        if (side === 'left') inputState._touchLeft = true;
+        else if (side === 'right') inputState._touchRight = true;
+      });
+      holdTimers.set(pointer.id, timer);
     };
 
-    const upHandler = (pointer) => {
-      const side = this._sideForPointer.get(pointer.id);
-      if (!side) return;
-      this._sideForPointer.delete(pointer.id);
-      // Only clear the side if no other finger is still on it
-      const stillLeft = [...this._sideForPointer.values()].includes('left');
-      const stillRight = [...this._sideForPointer.values()].includes('right');
+    const walkUp = (side) => (pointer) => {
+      const timer = holdTimers.get(pointer.id);
+      if (timer) { timer.destroy(); holdTimers.delete(pointer.id); }
+
+      // Release walk state for this side
+      this._walkSideForPointer.delete(pointer.id);
+      const stillLeft = [...this._walkSideForPointer.values()].includes('left');
+      const stillRight = [...this._walkSideForPointer.values()].includes('right');
       inputState._touchLeft = stillLeft;
       inputState._touchRight = stillRight;
+
+      // If the hold timer didn't fire, this was a quick tap → jump
+      if (!this._walkActivated.has(pointer.id)) {
+        inputState._touchJump = true;
+      }
+      this._walkActivated.delete(pointer.id);
     };
 
-    leftZone.on('pointerdown', downHandler('left'));
-    rightZone.on('pointerdown', downHandler('right'));
+    walkLeftZone.on('pointerdown', (pointer) => {
+      this._walkSideForPointer.set(pointer.id, 'left');
+      walkDown('left')(pointer);
+    });
+    walkRightZone.on('pointerdown', (pointer) => {
+      this._walkSideForPointer.set(pointer.id, 'right');
+      walkDown('right')(pointer);
+    });
 
-    // Listen to release globally so dragging off the zone still releases
-    // properly. pointerup fires on the scene's input system.
-    this.input.on('pointerup', upHandler);
-    this.input.on('pointerupoutside', upHandler);
+    walkLeftZone.on('pointerup', walkUp('left'));
+    walkRightZone.on('pointerup', walkUp('right'));
+
+    // Listen globally so releasing off the zone still cleans up
+    this.input.on('pointerup', (pointer) => {
+      const side = this._walkSideForPointer.get(pointer.id);
+      if (side) walkUp(side)(pointer);
+    });
+    this.input.on('pointerupoutside', (pointer) => {
+      const side = this._walkSideForPointer.get(pointer.id);
+      if (side) walkUp(side)(pointer);
+    });
+
+    // ── Jump strip (bottom, full width) ───────────────────────────────
+
+    const jumpZone = this.add.zone(0, JUMP_TOP, W, H - JUMP_TOP).setOrigin(0, 0).setInteractive();
+
+    const jumpG = this.add.graphics();
+    jumpG.fillStyle(0xffffff, 0.06);
+    jumpG.fillRect(0, JUMP_TOP, W, H - JUMP_TOP);
+    jumpG.lineStyle(1, 0xffffff, 0.1);
+    jumpG.lineBetween(0, JUMP_TOP, W, JUMP_TOP);
+    jumpG.setDepth(-1);
+
+    this.add.text(W / 2, JUMP_TOP + (H - JUMP_TOP) / 2, 'TAP TO JUMP', {
+      fontSize: '9px', fontFamily: 'monospace', color: '#ffffff',
+    }).setOrigin(0.5).setAlpha(0.3);
+
+    jumpZone.on('pointerdown', () => {
+      inputState._touchJump = true;
+    });
   }
+
+  // ── Dig button (appears after dig ability unlocked) ──────────────────
+
+  _buildDigButton() {
+    if (this._digBtn) return;
+    const bw = 40;
+    const bh = 26;
+    const bx = W - 44;
+    const by = H - 70;
+
+    const g = this.add.graphics();
+    this._digBtnG = g;
+    g.fillStyle(0x4e342e, 0.85);
+    g.fillRect(bx, by, bw, bh);
+    g.lineStyle(2, 0x8d6e63, 1);
+    g.strokeRect(bx, by, bw, bh);
+
+    this.add.text(bx + bw / 2, by + bh / 2, '⛏ DIG', {
+      fontSize: '8px', fontFamily: 'monospace', color: '#ffcc80',
+    }).setOrigin(0.5);
+
+    const zone = this.add.zone(bx, by, bw, bh).setOrigin(0, 0).setInteractive();
+    zone.on('pointerdown', () => {
+      // Signal a dig action via the GameScene
+      const gs = this.scene.get('GameScene');
+      if (gs && gs._tryDig) gs._tryDig();
+    });
+
+    this._digBtn = true;
+  }
+
+  // ── Cleanup ─────────────────────────────────────────────────────────
 
   _cleanup() {
     inputState._touchLeft = false;
     inputState._touchRight = false;
-    inputState._touchJumpRequest = false;
-    this._sideForPointer.clear();
+    inputState._touchJump = false;
+    this._walkSideForPointer.clear();
+    this._walkActivated.clear();
   }
 }

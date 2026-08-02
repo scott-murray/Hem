@@ -19,6 +19,7 @@ export const TILE = {
   BUNNY:        'B',   // bunny spawn point
   ENEMY_FOX:    'F',   // enemy spawn (fox)
   ENEMY_BUG:    'E',   // enemy spawn (beetle)
+  DIGGABLE:     'X',   // soft earth — diggable once dig ability unlocked
   // Burrow tiles 1..4: same digit pairs into one teleport pair.
 };
 
@@ -27,7 +28,7 @@ export const TILE_SRC_SIZE = 16;    // source pixel size
 export const TILE_SIZE = TILE_SRC_SIZE * TILE_SCALE; // 48 display px
 
 // Tiles that block passage (solid)
-export const SOLID_TILES = new Set([TILE.GROUND, TILE.GRASS, TILE.DOOR]);
+export const SOLID_TILES = new Set([TILE.GROUND, TILE.GRASS, TILE.DOOR, TILE.DIGGABLE]);
 
 // Tiles that are deadly on contact
 export const DEADLY_TILES = new Set([TILE.SPIKE]);

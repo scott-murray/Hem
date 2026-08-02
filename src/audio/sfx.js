@@ -60,11 +60,13 @@ function playNoiseBurst(duration, cutoffFreq = 800, gainVal = 0.2) {
 
 const sounds = {
   jump() {
-    playOscillator('square', 440, 700, 0.08, 0.2);
+    // Random slight pitch variation for variety
+    const base = 420 + Math.random() * 60;
+    playOscillator('square', base, base + 280, 0.08, 0.2);
   },
 
   land() {
-    playNoiseBurst(0.05, 300, 0.3);
+    playNoiseBurst(0.05, 280 + Math.random() * 60, 0.3);
   },
 
   collect() {
@@ -74,8 +76,17 @@ const sounds = {
     });
   },
 
+  collectSmall() {
+    // Higher, brighter chirp for small carrots
+    const notes = [659.25, 783.99, 1046.5];
+    notes.forEach((freq, i) => {
+      playOscillator('triangle', freq, freq, 0.05, 0.25, i * 0.06);
+    });
+  },
+
   hurt() {
-    playOscillator('sawtooth', 300, 100, 0.2, 0.25);
+    const base = 280 + Math.random() * 40;
+    playOscillator('sawtooth', base, 100, 0.2, 0.25);
   },
 
   puzzleOk() {
@@ -99,6 +110,13 @@ const sounds = {
   checkpoint() {
     playOscillator('triangle', 523.25, 659.25, 0.1, 0.25);
     playOscillator('triangle', 783.99, 783.99, 0.08, 0.25, 0.12);
+  },
+
+  dig() {
+    // Crumbly / scratching sound
+    playNoiseBurst(0.12, 400, 0.25);
+    playOscillator('triangle', 90, 60, 0.15, 0.15);
+    playOscillator('sawtooth', 40, 25, 0.1, 0.1, 0.04);
   },
 };
 

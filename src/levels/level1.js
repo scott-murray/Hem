@@ -36,6 +36,9 @@ export const LEVEL1_CONFIG = {
   number: 1,
   name: 'Carrot Valley',
   puzzleTypes: ['spelling'],
-  bgColor: 0x1a237e,
-  groundColor: 0x4caf50,
+  bgColor: 0x4fc3f7,
+  bgColorTop: 0x4fc3f7,
+  bgColorBot: 0x81d4fa,
+  groundColor: 0x6d4c41,
+  starColor: 0xffffff,
 };

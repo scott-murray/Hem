@@ -66,6 +66,7 @@ export class GameScene extends Phaser.Scene {
     this.activeDoors = new Map(); // puzzleId -> door sprite
     this.isWinning = false;
     this.isPaused = false;
+    this.hasDigAbility = false;
   }
 
   create() {
@@ -80,6 +81,9 @@ export class GameScene extends Phaser.Scene {
 
     // Per-level chiptune
     music.play(`level${this.levelNumber}`);
+
+    // Init diggable tile tracking (must be before _buildTilemap)
+    this.diggableTiles = new Map();
 
     // Background
     this._buildBackground();
@@ -129,33 +133,39 @@ export class GameScene extends Phaser.Scene {
 
   _buildBackground() {
     const bg = this.add.graphics();
-    const bgColor = this.levelConfig.bgColor;
+    const cfg = this.levelConfig;
+    const bgColorTop = cfg.bgColorTop || cfg.bgColor;
+    const bgColorBot = cfg.bgColorBot || cfg.bgColor;
 
-    // Extract RGB from hex color
-    const r = (bgColor >> 16) & 0xff;
-    const g = (bgColor >> 8) & 0xff;
-    const b = bgColor & 0xff;
+    // Extract RGB from hex colors
+    const r1 = (bgColorTop >> 16) & 0xff;
+    const g1 = (bgColorTop >> 8) & 0xff;
+    const b1 = bgColorTop & 0xff;
+    const r2 = (bgColorBot >> 16) & 0xff;
+    const g2 = (bgColorBot >> 8) & 0xff;
+    const b2 = bgColorBot & 0xff;
 
-    // Sky gradient
-    const steps = 15;
+    // Sky gradient (top → bottom)
+    const steps = 18;
     const levelH = this.parsedLevel.pixelHeight;
     const levelW = this.parsedLevel.pixelWidth;
 
     for (let i = 0; i < steps; i++) {
-      const t = i / steps;
-      const dr = Math.round(r * (1 - t * 0.3));
-      const dg = Math.round(g * (1 - t * 0.3));
-      const db = Math.round(b * (1 - t * 0.3));
+      const t = i / (steps - 1);
+      const dr = Math.round(r1 + (r2 - r1) * t);
+      const dg = Math.round(g1 + (g2 - g1) * t);
+      const db = Math.round(b1 + (b2 - b1) * t);
       const color = (dr << 16) | (dg << 8) | db;
       bg.fillStyle(color, 1);
       bg.fillRect(0, i * (levelH / steps), levelW, levelH / steps + 1);
     }
 
     // Stars / atmospheric detail
-    bg.fillStyle(0xffffff, 0.6);
+    const starColor = cfg.starColor || 0xffffff;
+    bg.fillStyle(starColor, 0.5 + Math.random() * 0.3);
     for (let i = 0; i < 40; i++) {
       const sx = Math.random() * levelW;
-      const sy = Math.random() * levelH * 0.5;
+      const sy = Math.random() * levelH * 0.6;
       bg.fillRect(sx, sy, 2, 2);
     }
   }
@@ -186,6 +196,9 @@ export class GameScene extends Phaser.Scene {
         } else if (ch === TILE.PLATFORM) {
           textureKey = 'tile_platform';
           group = this.platformGroup;
+        } else if (ch === TILE.DIGGABLE) {
+          textureKey = 'tile_diggable';
+          group = this.groundGroup;
         } else if (ch === TILE.PUZZLE) {
           // Puzzle tiles are drawn but handled in specials
           textureKey = 'tile_puzzle';
@@ -196,6 +209,10 @@ export class GameScene extends Phaser.Scene {
           const sprite = group.create(cx, cy, textureKey);
           sprite.setScale(TILE_SCALE);
           sprite.refreshBody();
+          // Track diggable tiles so we can remove them when dug
+          if (ch === TILE.DIGGABLE) {
+            this.diggableTiles.set(`${r},${c}`, sprite);
+          }
         } else if (textureKey && !group) {
           // Visual only
           this.add.image(cx, cy, textureKey).setScale(TILE_SCALE);
@@ -416,7 +433,7 @@ export class GameScene extends Phaser.Scene {
     if (!sc.active) return;
     sc.disableBody(true, true);
     this.collectedCarrots++;
-    sfx.play('collect');
+    sfx.play('collectSmall');
     if (this.sparkleEmitter) this.sparkleEmitter.explode(6, sc.x, sc.y);
     if (this.uiScene) {
       this.uiScene.setCarrotCount(this.collectedCarrots, this.smallCarrots.length);
@@ -453,6 +470,7 @@ export class GameScene extends Phaser.Scene {
     this._checkFallDeath();
     this._checkCheckpoints();
     this._checkBurrows();
+    this._checkDig();
     this._updateInvuln(dt);
   }
 
@@ -484,6 +502,66 @@ export class GameScene extends Phaser.Scene {
       this.sparkleEmitter.explode(8, on.x, on.y);
       this.sparkleEmitter.explode(8, on.target.x, on.target.y);
     }
+  }
+
+  _checkDig() {
+    if (!this.hasDigAbility) return;
+    // Keyboard: press Down/S to dig
+    if (!inputState.down) return;
+
+    // Check the tile directly beneath the bunny's feet
+    const bx = this.bunny.x;
+    const by = this.bunny.y + TILE_SIZE * 0.6;
+    const col = Math.floor(bx / TILE_SIZE);
+    const row = Math.floor(by / TILE_SIZE);
+
+    if (row < 0 || row >= this.parsedLevel.tiles.length) return;
+    if (col < 0 || col >= this.parsedLevel.tiles[row].length) return;
+
+    if (this.parsedLevel.tiles[row][col] === TILE.DIGGABLE) {
+      this._digTile(row, col);
+    }
+  }
+
+  /** Called from UIScene dig button (mobile) or _checkDig (keyboard). */
+  _tryDig() {
+    if (!this.hasDigAbility) return;
+    const bx = this.bunny.x;
+    const by = this.bunny.y + TILE_SIZE * 0.6;
+    const col = Math.floor(bx / TILE_SIZE);
+    const row = Math.floor(by / TILE_SIZE);
+    if (row < 0 || row >= this.parsedLevel.tiles.length) return;
+    if (col < 0 || col >= this.parsedLevel.tiles[row].length) return;
+    if (this.parsedLevel.tiles[row][col] === TILE.DIGGABLE) {
+      this._digTile(row, col);
+    }
+  }
+
+  _digTile(row, col) {
+    const key = `${row},${col}`;
+    const sprite = this.diggableTiles.get(key);
+    if (!sprite) return;
+
+    // Remove physics body from the static group and destroy sprite
+    sprite.destroy();
+    this.diggableTiles.delete(key);
+
+    // Update the tile map so the gap is real
+    this.parsedLevel.tiles[row][col] = TILE.EMPTY;
+
+    sfx.play('dig');
+    // Particle burst
+    if (this.dustEmitter) {
+      const x = col * TILE_SIZE + TILE_SIZE / 2;
+      const y = row * TILE_SIZE + TILE_SIZE / 2;
+      this.dustEmitter.setParticleTint(0x8d6e63);
+      this.dustEmitter.explode(8, x, y);
+      // Reset tint
+      this.time.delayedCall(50, () => this.dustEmitter.setParticleTint(0xffffff));
+    }
+
+    // Brief cooldown so one press doesn't chain-dig
+    inputState.down = false;
   }
 
   _updateBunny(dt) {
@@ -653,6 +731,16 @@ export class GameScene extends Phaser.Scene {
 
     if (puzzleResult === 'success') {
       this.solvedPuzzles.add(puzzleId);
+
+      // Check if this puzzle unlocks the dig ability
+      const types = this.levelConfig.puzzleTypes;
+      const puzzleType = types[puzzleId % types.length];
+      if (puzzleType === 'dig-teach') {
+        this.hasDigAbility = true;
+        if (this.uiScene && this.uiScene.showDigButton) {
+          this.uiScene.showDigButton();
+        }
+      }
 
       // Remove every door tile in this group
       const group = this.doors.get(puzzleId);

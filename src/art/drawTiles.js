@@ -118,6 +118,28 @@ export function generateTileTextures(scene) {
     ctx.strokeRect(0.5, 0.5, TW - 1, TH - 1);
   });
 
+  // Diggable soft earth (crumbly brown with crack marks)
+  makeTexture(scene, 'tile_diggable', TW, TH, (ctx) => {
+    ctx.fillStyle = '#6d4c41';
+    ctx.fillRect(0, 0, TW, TH);
+    // Lighter patches
+    ctx.fillStyle = '#8d6e63';
+    ctx.fillRect(2, 1, 2, 1);
+    ctx.fillRect(10, 5, 3, 1);
+    ctx.fillRect(5, 11, 2, 2);
+    // Cracks / fissures
+    ctx.fillStyle = '#3e2723';
+    ctx.fillRect(4, 0, 1, 3);
+    ctx.fillRect(7, 2, 1, 2);
+    ctx.fillRect(11, 6, 1, 4);
+    ctx.fillRect(3, 10, 3, 1);
+    ctx.fillRect(12, 13, 2, 1);
+    // Tiny pebble details
+    ctx.fillStyle = '#a1887f';
+    ctx.fillRect(1, 7, 1, 1);
+    ctx.fillRect(13, 3, 1, 1);
+  });
+
   // Empty / transparent tile (not rendered)
   makeTexture(scene, 'tile_empty', TW, TH, (ctx) => {
     ctx.clearRect(0, 0, TW, TH);

@@ -41,6 +41,8 @@ export class PuzzleScene extends Phaser.Scene {
 
     if (this.puzzleType === 'spelling') {
       this._buildSpellingPuzzle();
+    } else if (this.puzzleType === 'dig-teach') {
+      this._buildDigTeach();
     } else {
       this._buildMathPuzzle();
     }
@@ -174,6 +176,45 @@ export class PuzzleScene extends Phaser.Scene {
     zone.on('pointerdown', () => onClick());
 
     return { g, zone };
+  }
+
+  _buildDigTeach() {
+    // A tutorial puzzle that teaches the player to dig.
+    // Shows instructions and has a single "Got it!" button.
+
+    this.add.text(W / 2, PANEL_Y + 20, '⛏ NEW ABILITY!', {
+      fontSize: '14px',
+      fontFamily: 'monospace',
+      color: '#ffcc80',
+      stroke: '#1a1a2e',
+      strokeThickness: 2,
+    }).setOrigin(0.5);
+
+    this.add.text(W / 2, PANEL_Y + 55, 'DIG', {
+      fontSize: '24px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+      stroke: '#1a1a2e',
+      strokeThickness: 3,
+    }).setOrigin(0.5);
+
+    this.add.text(W / 2, PANEL_Y + 82, 'Press ↓ or tap ⛏ on soft earth\nto burrow through crumbly ground!', {
+      fontSize: '9px',
+      fontFamily: 'monospace',
+      color: '#b0bec5',
+      align: 'center',
+      lineSpacing: 4,
+    }).setOrigin(0.5);
+
+    // Single large "Got it!" button
+    const btnW = 140;
+    const btnH = 40;
+    const btnX = W / 2 - btnW / 2;
+    const btnY = PANEL_Y + 130;
+
+    this._makeAnswerBtn(btnX, btnY, btnW, btnH, 'GOT IT! ✓', () => {
+      this._handleAnswer(true);
+    });
   }
 
   _handleAnswer(correct) {
