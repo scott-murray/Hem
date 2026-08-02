@@ -10,15 +10,17 @@
 class_name TouchHandler
 extends Control
 
+const PlayerClass = preload("res://scripts/player.gd")
+
 const SWIPE_THRESHOLD := 30.0
 const TAP_THRESHOLD    := 0.12  # seconds
 
 var _pointer_start: Dictionary = {}   # int -> {x, y, time}
 var _active_side:   Dictionary = {}   # int -> "left" | "right"
-var _player:         Player
+var _player:         Node2D
 
 
-func setup(player_node: Player) -> void:
+func setup(player_node: Node2D) -> void:
 	_player = player_node
 
 
@@ -61,11 +63,11 @@ func _on_touch_up(event: InputEventScreenTouch) -> void:
 	var still_right := _active_side.values().has("right")
 	_player.set_touch_walk(still_left, still_right)
 
-	var dy := event.position.y - start.y
-	var dx := event.position.x - start.x
-	var abs_dy := absf(dy)
-	var abs_dx := absf(dx)
-	var duration := Time.get_ticks_msec() / 1000.0 - start.time
+	var dy: float = event.position.y - start.y
+	var dx: float = event.position.x - start.x
+	var abs_dy: float = absf(dy)
+	var abs_dx: float = absf(dx)
+	var duration: float = Time.get_ticks_msec() / 1000.0 - start.time
 
 	if abs_dy > SWIPE_THRESHOLD:
 		# Vertical swipe

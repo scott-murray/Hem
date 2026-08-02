@@ -13,11 +13,14 @@
 class_name GameController
 extends Node2D
 
+const PlayerClass     = preload("res://scripts/player.gd")
+const LevelParser     = preload("res://scripts/level_parser.gd")
+
 const TILE_SIZE   := 48
 const ENEMY_SPEED := 35.0
 const LEVEL_COUNT := 5
 
-@onready var player:        Player            = $Player
+@onready var player:        Node2D            = $Player
 @onready var ground_layer:  TileMapLayer      = $GroundLayer
 @onready var entity_parent: Node2D            = $Entities
 @onready var camera:        Camera2D          = $Camera2D
@@ -79,7 +82,7 @@ func _config_for(n: int) -> Dictionary:
 func _build_ground() -> void:
 	for r in parsed.height_tiles:
 		for c in parsed.width_tiles:
-			var ch := parsed.tiles[r][c]
+			var ch: String = parsed.tiles[r][c]
 			var source_id := -1
 			match ch:
 				"T": source_id = 0  # grass
@@ -124,7 +127,7 @@ func _spawn_collectible(spec: Dictionary, texture_key: String, callback: String)
 
 
 func _on_collectible_entered(body: Node2D, callback: String, self_area: Area2D) -> void:
-	if not body is Player: return
+	if not body is PlayerClass: return
 	self_area.queue_free()
 	call(callback)
 
@@ -168,7 +171,7 @@ func _spawn_puzzle_zone(spec: Dictionary) -> void:
 
 
 func _on_puzzle_entered(body: Node2D, puzzle_id: int) -> void:
-	if not body is Player: return
+	if not body is PlayerClass: return
 	if puzzle_id in solved_puzzles: return
 	var types: Array = level_config.puzzle_types
 	var ptype: String = types[puzzle_id % types.size()]
@@ -217,8 +220,8 @@ func _spawn_exit_carrot(spec: Dictionary) -> void:
 
 
 func _setup_camera() -> void:
-	var map_width  := parsed.pixel_width
-	var map_height := parsed.pixel_height
+	var map_width:  float = parsed.pixel_width
+	var map_height: float = parsed.pixel_height
 	camera.limit_left   = 0
 	camera.limit_right  = map_width
 	camera.limit_top    = 0

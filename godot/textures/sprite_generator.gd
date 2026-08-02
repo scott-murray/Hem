@@ -11,6 +11,11 @@
 class_name SpriteGenerator
 extends RefCounted
 
+static var _textures: Dictionary = {}
+
+static func get_texture(key: String) -> ImageTexture:
+	return _textures.get(key, null)
+
 const SRC  := 16
 const SCALE := 3
 const PX   := SCALE  # display pixel size per source pixel
@@ -30,8 +35,8 @@ static func make_texture(key: String, w: int, h: int, draw_fn: Callable) -> Imag
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
 	draw_fn.call(img)
 	var tex := ImageTexture.create_from_image(img)
-	# Store in a global texture registry so scenes can look it up by key.
-	TextureRegistry.register(key, tex)
+	# Store in a static dictionary so scenes can look it up by key.
+	_textures[key] = tex
 	return tex
 
 
@@ -194,13 +199,13 @@ static func _generate_ui() -> void:
 		var H := Color("f44336")
 		_fill(img, 1, 2, 2, 1, H); _fill(img, 5, 2, 2, 1, H)
 		_fill(img, 0, 3, 8, 2, H); _fill(img, 1, 5, 6, 2, H)
-		_fill(img, 2, 7, 4, 1, H); _fill(img, 3, 8, 2, 1, H)
+		_fill(img, 2, 7, 4, 1, H)  # y=7, h=1 fits in 0..7
 	)
 	make_texture("heart_empty", 8, 8, func(img):
 		var H := Color("424242")
 		_fill(img, 1, 2, 2, 1, H); _fill(img, 5, 2, 2, 1, H)
 		_fill(img, 0, 3, 8, 2, H); _fill(img, 1, 5, 6, 2, H)
-		_fill(img, 2, 7, 4, 1, H); _fill(img, 3, 8, 2, 1, H)
+		_fill(img, 2, 7, 4, 1, H)
 	)
 
 

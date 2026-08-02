@@ -83,6 +83,7 @@ fullscreen={
 }
 
 [autoload]
+SignalBus="*res://scripts/signal_bus.gd"
 Progress="*res://scripts/progress.gd"
 AudioManager="*res://scripts/audio_manager.gd"
 

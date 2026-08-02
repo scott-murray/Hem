@@ -83,7 +83,7 @@ static func parse(raw_text: String) -> Dictionary:
 				Tile.SPIKE:
 					specials.append({type = "spike", row = r, col = c, x = x, y = y})
 				Tile.PUZZLE:
-					puzzles.append({type = "puzzle", row = r, col = c, x = x, y})
+					puzzles.append({type = "puzzle", row = r, col = c, x = x, y = y})
 				Tile.DOOR:
 					var above_id := -1
 					if r > 0:
