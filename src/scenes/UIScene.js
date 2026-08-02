@@ -151,8 +151,7 @@ export class UIScene extends Phaser.Scene {
     const WALK_MID = W / 2;
     const SWIPE_THRESHOLD = 30;      // px of vertical movement to trigger jump/dig
 
-    const pointerStartY = new Map();  // pointerId -> last y (for swipe detection)
-    const pointerJumped = new Set();  // pointerIds that already triggered a jump
+    const pointerStartY = new Map();  // pointerId -> last y baseline (for swipe detection)
 
     // Walk zones (full height)
     const walkLeftZone  = this.add.zone(0, HUD_H, WALK_MID, H - HUD_H).setOrigin(0, 0).setInteractive();
@@ -181,7 +180,6 @@ export class UIScene extends Phaser.Scene {
       if (side === 'left')  inputState._touchLeft  = true;
       if (side === 'right') inputState._touchRight = true;
       pointerStartY.set(pointer.id, pointer.y);
-      pointerJumped.delete(pointer.id);
       this._walkSideForPointer.set(pointer.id, side);
     };
 
@@ -191,17 +189,16 @@ export class UIScene extends Phaser.Scene {
       const dy = startY - pointer.y;  // positive = upward
       const absDy = Math.abs(dy);
 
-      if (absDy > SWIPE_THRESHOLD && !pointerJumped.has(pointer.id)) {
-        pointerJumped.add(pointer.id);
+      if (absDy > SWIPE_THRESHOLD) {
         if (dy > 0) {
-          // Swipe up -> jump
+          // Swipe up -> jump (can re-trigger on further upward movement)
           inputState._touchJump = true;
         } else {
           // Swipe down -> dig
           const gs = this.scene.get('GameScene');
           if (gs && gs._tryDig) gs._tryDig();
         }
-        // Reset baseline so another swipe can trigger again
+        // Reset baseline so further swipes trigger again
         pointerStartY.set(pointer.id, pointer.y);
       }
     };
@@ -215,7 +212,6 @@ export class UIScene extends Phaser.Scene {
       inputState._touchRight = stillRight;
 
       pointerStartY.delete(pointer.id);
-      pointerJumped.delete(pointer.id);
     };
 
     walkLeftZone.on('pointerdown', pointerDown('left'));

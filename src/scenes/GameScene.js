@@ -583,26 +583,35 @@ export class GameScene extends Phaser.Scene {
   }
 
   _digTile(row, col) {
-    const key = `${row},${col}`;
-    const sprite = this.diggableTiles.get(key);
-    if (!sprite) return;
+    // Dig through ALL vertically adjacent X tiles below the bunny.
+    // This prevents the player getting stuck in a 1-tile pit.
+    const tiles = this.parsedLevel.tiles;
+    let dug = 0;
 
-    // Remove physics body from the static group and destroy sprite
-    sprite.destroy();
-    this.diggableTiles.delete(key);
+    for (let r = row; r < tiles.length; r++) {
+      const key = `${r},${col}`;
+      const sprite = this.diggableTiles.get(key);
+      if (!sprite) break; // no more diggable tiles in this column
 
-    // Update the tile map so the gap is real
-    this.parsedLevel.tiles[row][col] = TILE.EMPTY;
+      sprite.destroy();
+      this.diggableTiles.delete(key);
+      tiles[r][col] = TILE.EMPTY;
 
-    sfx.play('dig');
-    // Particle burst
-    if (this.dustEmitter) {
-      const x = col * TILE_SIZE + TILE_SIZE / 2;
-      const y = row * TILE_SIZE + TILE_SIZE / 2;
-      this.dustEmitter.setParticleTint(0x8d6e63);
-      this.dustEmitter.explode(8, x, y);
-      // Reset tint
-      this.time.delayedCall(50, () => this.dustEmitter.setParticleTint(0xffffff));
+      // Particle burst at each dug tile
+      if (this.dustEmitter) {
+        const x = col * TILE_SIZE + TILE_SIZE / 2;
+        const y = r * TILE_SIZE + TILE_SIZE / 2;
+        this.dustEmitter.setParticleTint(0x8d6e63);
+        this.dustEmitter.explode(4, x, y);
+      }
+      dug++;
+    }
+
+    if (dug > 0) {
+      sfx.play('dig');
+      if (this.dustEmitter) {
+        this.time.delayedCall(50, () => this.dustEmitter.setParticleTint(0xffffff));
+      }
     }
 
     // Brief cooldown so one press doesn't chain-dig
