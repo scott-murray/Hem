@@ -29,7 +29,14 @@ var lives          := 3
 
 
 func _ready() -> void:
-	pass  # spawn position set by game controller
+	# Set bunny sprite texture
+	var tex := SpriteGenerator.get_texture("bunny_idle")
+	if tex and has_node("Sprite2D"):
+		$Sprite2D.texture = tex
+		$Sprite2D.scale = Vector2(3, 3)
+		$Sprite2D.centered = true
+	# Enable input processing on this CharacterBody2D
+	set_process_input(true)
 
 
 func _physics_process(delta: float) -> void:

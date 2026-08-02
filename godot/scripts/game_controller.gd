@@ -63,7 +63,17 @@ func set_level(n: int) -> void:
 	_requested_level = n
 
 
+func _build_sky() -> void:
+	# Sky background — simple solid color for now.
+	# Full gradient needs the Godot editor to set up properly
+	# (runtime ImageTexture doesn't render in HTML5 export).
+	var cfg: Dictionary = _config_for(level_number)
+	var top_color: Color = Color(cfg.bg_top) if cfg.has("bg_top") else Color("1a237e")
+	# Tint the clear color to match the level theme
+	RenderingServer.set_default_clear_color(top_color)
+
 func _load_level(n: int) -> void:
+	_build_sky()
 	var map: Array = LevelData.get_map(n)
 	var raw_text := "\n".join(map)
 	parsed = LevelParser.parse(raw_text)
