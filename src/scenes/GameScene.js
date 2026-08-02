@@ -3,6 +3,8 @@ import { TILE, TILE_SIZE, TILE_SRC_SIZE, TILE_SCALE, SOLID_TILES, DEADLY_TILES, 
 import { LEVEL1_MAP, LEVEL1_CONFIG } from '../levels/level1.js';
 import { LEVEL2_MAP, LEVEL2_CONFIG } from '../levels/level2.js';
 import { LEVEL3_MAP, LEVEL3_CONFIG } from '../levels/level3.js';
+import { LEVEL4_MAP, LEVEL4_CONFIG } from '../levels/level4.js';
+import { LEVEL5_MAP, LEVEL5_CONFIG } from '../levels/level5.js';
 import { storage } from '../progress/storage.js';
 import { sfx } from '../audio/sfx.js';
 import { music } from '../audio/music.js';
@@ -45,6 +47,8 @@ const LEVELS = [
   { map: LEVEL1_MAP, config: LEVEL1_CONFIG },
   { map: LEVEL2_MAP, config: LEVEL2_CONFIG },
   { map: LEVEL3_MAP, config: LEVEL3_CONFIG },
+  { map: LEVEL4_MAP, config: LEVEL4_CONFIG },
+  { map: LEVEL5_MAP, config: LEVEL5_CONFIG },
 ];
 
 export class GameScene extends Phaser.Scene {

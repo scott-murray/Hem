@@ -106,43 +106,53 @@ export class StartScene extends Phaser.Scene {
   _buildLevelButtons() {
     const progress = this.progress;
 
-    this.add.text(W / 2, 110, 'SELECT LEVEL', {
+    this.add.text(W / 2, 105, 'SELECT LEVEL', {
       fontSize: '11px',
       fontFamily: 'monospace',
       color: '#c5cae9',
     }).setOrigin(0.5);
 
-    const levelNames = ['Carrot Valley', 'Fox Forest', 'Crystal Caves'];
-    const btnY = 140;
-    const btnW = 110;
-    const btnH = 36;
-    const gap = 10;
-    const totalW = 3 * btnW + 2 * gap;
-    const startX = (W - totalW) / 2;
+    const levelNames = ['Carrot Valley', 'Fox Forest', 'Crystal Caves', 'Burrow Depths', 'Sky Gardens'];
+    const btnY1 = 125;
+    const btnY2 = 168;
+    const btnW = 84;
+    const btnH = 34;
+    const gap = 8;
+    const row1Count = 3;
+    const row1W = row1Count * btnW + (row1Count - 1) * gap;
+    const row1X = (W - row1W) / 2;
+    const row2Count = 2;
+    const row2W = row2Count * btnW + (row2Count - 1) * gap;
+    const row2X = (W - row2W) / 2;
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 5; i++) {
       const level = i + 1;
       const unlocked = level <= progress.unlockedLevel;
       const completed = progress.completedLevels.includes(level);
-      const bx = startX + i * (btnW + gap);
+      const row = i < 3 ? 0 : 1;
+      const col = i < 3 ? i : i - 3;
+      const rowX = i < 3 ? row1X : row2X;
+      const rowY = i < 3 ? btnY1 : btnY2;
+      const bx = rowX + col * (btnW + gap);
+      const by = rowY;
 
       const g = this.add.graphics();
 
       // Button background
       g.fillStyle(unlocked ? (completed ? 0x2e7d32 : 0x1565c0) : 0x424242, 1);
-      g.fillRect(bx, btnY, btnW, btnH);
+      g.fillRect(bx, by, btnW, btnH);
       g.lineStyle(2, unlocked ? (completed ? 0x4caf50 : 0x42a5f5) : 0x616161, 1);
-      g.strokeRect(bx, btnY, btnW, btnH);
+      g.strokeRect(bx, by, btnW, btnH);
 
       // Level number
-      this.add.text(bx + btnW / 2, btnY + 10, `Level ${level}`, {
+      this.add.text(bx + btnW / 2, by + 10, `Level ${level}`, {
         fontSize: '11px',
         fontFamily: 'monospace',
         color: unlocked ? '#ffffff' : '#757575',
       }).setOrigin(0.5);
 
       // Level name
-      this.add.text(bx + btnW / 2, btnY + 22, levelNames[i], {
+      this.add.text(bx + btnW / 2, by + 22, levelNames[i], {
         fontSize: '8px',
         fontFamily: 'monospace',
         color: unlocked ? '#c5cae9' : '#616161',
@@ -150,11 +160,11 @@ export class StartScene extends Phaser.Scene {
 
       // Lock icon or checkmark
       if (!unlocked) {
-        this.add.text(bx + btnW - 12, btnY + 5, '🔒', {
+        this.add.text(bx + btnW - 12, by + 5, '🔒', {
           fontSize: '10px',
         });
       } else if (completed) {
-        this.add.text(bx + btnW - 12, btnY + 5, '✓', {
+        this.add.text(bx + btnW - 12, by + 5, '✓', {
           fontSize: '10px',
           fontFamily: 'monospace',
           color: '#a5d6a7',
@@ -163,7 +173,7 @@ export class StartScene extends Phaser.Scene {
 
       if (unlocked) {
         // Make interactive
-        const zone = this.add.zone(bx, btnY, btnW, btnH).setOrigin(0, 0).setInteractive();
+        const zone = this.add.zone(bx, by, btnW, btnH).setOrigin(0, 0).setInteractive();
         zone.on('pointerdown', () => {
           sfx.unlock();
           this._maybeAutoFullscreen();
@@ -172,22 +182,22 @@ export class StartScene extends Phaser.Scene {
         zone.on('pointerover', () => {
           g.clear();
           g.fillStyle(completed ? 0x388e3c : 0x1976d2, 1);
-          g.fillRect(bx, btnY, btnW, btnH);
+          g.fillRect(bx, by, btnW, btnH);
           g.lineStyle(2, completed ? 0x66bb6a : 0x64b5f6, 1);
-          g.strokeRect(bx, btnY, btnW, btnH);
+          g.strokeRect(bx, by, btnW, btnH);
         });
         zone.on('pointerout', () => {
           g.clear();
           g.fillStyle(completed ? 0x2e7d32 : 0x1565c0, 1);
-          g.fillRect(bx, btnY, btnW, btnH);
+          g.fillRect(bx, by, btnW, btnH);
           g.lineStyle(2, completed ? 0x4caf50 : 0x42a5f5, 1);
-          g.strokeRect(bx, btnY, btnW, btnH);
+          g.strokeRect(bx, by, btnW, btnH);
         });
       }
     }
 
     // Play button (jump to highest unlocked)
-    const playBtnY = 190;
+    const playBtnY = 212;
     const playBtnW = 140;
     const playBtnX = (W - playBtnW) / 2;
 

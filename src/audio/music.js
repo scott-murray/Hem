@@ -60,6 +60,28 @@ const TRACKS = {
     bass:  [38, -1, 45, -1, 38, -1, 45, -1, 41, -1, 48, -1, 36, -1, 43, -1],
     drums: ['k', '-', 'h', 'h', 's', '-', 'h', '-', 'k', 'h', 'h', '-', 's', 'h', 'h', 'h'],
   },
+
+  // Burrow Depths — deep D minor, echoing triangle, slow and cavernous
+  level4: {
+    bpm: 100,
+    leadType: 'triangle',
+    leadGain: 0.11,
+    bassGain: 0.15,
+    lead:  [62, -1, 65, -1, 69, -1, 65, -1, 62, -1, -1, -1, 60, -1, 62, -1],
+    bass:  [38, -1, -1, -1, 38, -1, -1, -1, 41, -1, -1, -1, 41, -1, -1, -1],
+    drums: ['k', '-', '-', '-', 's', '-', 'h', '-', 'k', '-', 'h', '-', 's', '-', '-', '-'],
+  },
+
+  // Sky Gardens — bright G major, airy square lead, upbeat
+  level5: {
+    bpm: 130,
+    leadType: 'square',
+    leadGain: 0.10,
+    bassGain: 0.12,
+    lead:  [79, -1, 83, -1, 86, 83, 79, -1, 76, -1, 79, -1, 83, -1, 86, -1],
+    bass:  [43, -1, 43, -1, 50, -1, 50, -1, 47, -1, 47, -1, 43, -1, 43, -1],
+    drums: ['k', '-', 'h', '-', 's', '-', 'h', 'h', 'k', '-', 'h', '-', 's', 'h', 'h', '-'],
+  },
 };
 
 let muted = false;

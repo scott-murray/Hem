@@ -50,7 +50,7 @@ export const storage = {
     }
     // Unlock next level
     const nextLevel = level + 1;
-    if (nextLevel <= 3 && nextLevel > data.unlockedLevel) {
+    if (nextLevel <= 5 && nextLevel > data.unlockedLevel) {
       data.unlockedLevel = nextLevel;
     }
     this.save(data);
