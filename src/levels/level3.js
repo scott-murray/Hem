@@ -25,7 +25,7 @@ export const LEVEL3_MAP = [
   '                             PPP          ',
   '   PPP         XX                         ',
   '       c       XX                     X X ',
-  '      PPP              c       PPP    XcX ',
+  '      PPP              c       PPP    XbX ',
   '                                      XXX ',
   '   PPP           D    PPPXXXD  PPP        ',
   '                 D          D             ',

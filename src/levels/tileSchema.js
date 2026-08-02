@@ -20,6 +20,7 @@ export const TILE = {
   ENEMY_FOX:    'F',   // enemy spawn (fox)
   ENEMY_BUG:    'E',   // enemy spawn (beetle)
   DIGGABLE:     'X',   // soft earth — diggable once dig ability unlocked
+  BROCCOLI:     'b',   // bonus collectible — does NOT gate exit (separate from carrots)
   // Burrow tiles 1..4: same digit pairs into one teleport pair.
 };
 
@@ -94,6 +95,8 @@ export function parseLevel(map) {
         doorGroups[gid].push({ row: r, col: c, x, y });
       } else if (ch === TILE.ENEMY_FOX) {
         specials.push({ type: 'enemy_fox', row: r, col: c, x, y });
+      } else if (ch === TILE.BROCCOLI) {
+        specials.push({ type: 'broccoli', row: r, col: c, x, y });
       } else if (ch === TILE.ENEMY_BUG) {
         specials.push({ type: 'enemy_beetle', row: r, col: c, x, y });
       } else if (BURROW_DIGITS.has(ch)) {

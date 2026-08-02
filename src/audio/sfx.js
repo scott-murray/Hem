@@ -112,6 +112,14 @@ const sounds = {
     playOscillator('triangle', 783.99, 783.99, 0.08, 0.25, 0.12);
   },
 
+  broccoli() {
+    // Cheerful ascending arpeggio — distinct from carrot collect
+    const notes = [392, 523.25, 659.25, 783.99];
+    notes.forEach((freq, i) => {
+      playOscillator('triangle', freq, freq, 0.07, 0.3, i * 0.07);
+    });
+  },
+
   dig() {
     // Crumbly / scratching sound
     playNoiseBurst(0.12, 400, 0.25);

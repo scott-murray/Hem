@@ -5,6 +5,7 @@ const DEFAULT_PROGRESS = {
   completedLevels: [],
   muted: false,
   hasDigAbility: false,
+  broccolis: 0,
 };
 
 export const storage = {
@@ -72,5 +73,16 @@ export const storage = {
     data.hasDigAbility = val;
     this.save(data);
     return data;
+  },
+
+  getBroccolis() {
+    return this.load().broccolis || 0;
+  },
+
+  addBroccoli() {
+    const data = this.load();
+    data.broccolis = (data.broccolis || 0) + 1;
+    this.save(data);
+    return data.broccolis;
   },
 };

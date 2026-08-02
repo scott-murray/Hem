@@ -242,6 +242,9 @@ export class GameScene extends Phaser.Scene {
     this.spikes = this.physics.add.staticGroup();
     this.smallCarrots = [];
     this.collectedCarrots = 0;
+    this.broccolis = [];
+    // sessionBroccolis resets each level; storage tracks lifetime total
+    this.sessionBroccolis = 0;
     this.burrows = [];
     this._pendingBurrowExit = false;
 
@@ -308,6 +311,21 @@ export class GameScene extends Phaser.Scene {
         const group = this.doors.get(spec.id) || [];
         group.push(doorSprite);
         this.doors.set(spec.id, group);
+      } else if (type === 'broccoli') {
+        const broc = this.physics.add.sprite(x, y, 'broccoli', 0);
+        broc.setScale(TILE_SCALE * 0.5);
+        broc.body.setAllowGravity(false);
+        broc.body.setImmovable(true);
+        broc.setDepth(4);
+        this.tweens.add({
+          targets: broc,
+          y: y - 3,
+          duration: 600 + Math.random() * 300,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
+        this.broccolis.push(broc);
       } else if (type === 'enemy_fox') {
         this._spawnEnemy(x, y, 'fox');
       } else if (type === 'enemy_beetle') {
@@ -412,6 +430,13 @@ export class GameScene extends Phaser.Scene {
       this._hurtBunny();
     });
 
+    // Bunny vs broccoli (bonus collectible, doesn't gate exit)
+    if (this.broccolis.length > 0) {
+      this.physics.add.overlap(this.bunny, this.broccolis, (_b, broc) => {
+        this._collectBroccoli(broc);
+      });
+    }
+
     // Bunny vs small carrots
     if (this.smallCarrots.length > 0) {
       this.physics.add.overlap(this.bunny, this.smallCarrots, (_b, sc) => {
@@ -439,6 +464,22 @@ export class GameScene extends Phaser.Scene {
       this.uiScene.setCarrotCount(this.collectedCarrots, this.smallCarrots.length);
     }
     this._refreshCarrotGate();
+  }
+
+  _collectBroccoli(broc) {
+    if (!broc.active) return;
+    broc.disableBody(true, true);
+    this.sessionBroccolis++;
+    sfx.play('broccoli');
+    if (this.sparkleEmitter) {
+      this.sparkleEmitter.setParticleTint(0x4caf50);
+      this.sparkleEmitter.explode(6, broc.x, broc.y);
+      this.time.delayedCall(50, () => this.sparkleEmitter.setParticleTint(0xffffff));
+    }
+    if (this.uiScene) {
+      this.uiScene.setBroccoliCount(this.sessionBroccolis);
+    }
+    storage.addBroccoli();
   }
 
   _refreshCarrotGate() {

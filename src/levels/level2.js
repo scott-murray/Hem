@@ -25,7 +25,7 @@ export const LEVEL2_MAP = [
   '                                    ',
   '   PPP      D  PPP      D PPP  XX   ',
   '            D           D      X    ',
-  'B   c F Q   D   Q K     D  F   X  C ',
+  'B   c F Q   D   Q K     D  F   Xb C ',
   'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
   'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
   'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',

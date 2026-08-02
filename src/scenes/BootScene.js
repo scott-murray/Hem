@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { generateBunnyTextures } from '../art/drawBunny.js';
 import { generateTileTextures } from '../art/drawTiles.js';
 import { generateEnemyTextures } from '../art/drawEnemy.js';
-import { generateCarrotTextures } from '../art/drawCarrot.js';
+import { generateCarrotTextures, generateBroccoliTexture } from '../art/drawCarrot.js';
 import { generateParticleTextures } from '../art/drawParticles.js';
 import { storage } from '../progress/storage.js';
 import { sfx } from '../audio/sfx.js';
@@ -24,6 +24,7 @@ export class BootScene extends Phaser.Scene {
     generateTileTextures(this);
     generateEnemyTextures(this);
     generateCarrotTextures(this);
+    generateBroccoliTexture(this);
     generateParticleTextures(this);
 
     // Create animations

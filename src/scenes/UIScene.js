@@ -50,6 +50,20 @@ export class UIScene extends Phaser.Scene {
     }
   }
 
+  setBroccoliCount(got) {
+    this._broccoliCount = got;
+    if (!this._broccoliText) return;
+    if (got === 0) {
+      this._broccoliText.setVisible(false);
+      this._broccoliIcon.setVisible(false);
+      return;
+    }
+    this._broccoliText.setVisible(true);
+    this._broccoliIcon.setVisible(true);
+    this._broccoliText.setText(`${got}`);
+    this._broccoliText.setColor('#ffd54f');
+  }
+
   setCarrotCount(got, total) {
     this._carrotCount = got;
     this._carrotTotal = total;
@@ -115,6 +129,14 @@ export class UIScene extends Phaser.Scene {
       fontSize: '9px',
       fontFamily: 'monospace',
       color: '#ffffff',
+    }).setOrigin(0, 0.5).setVisible(false);
+
+    // Broccoli counter (right of carrot counter, only shows when >0)
+    this._broccoliIcon = this.add.image(104, 9, 'broccoli', 0).setOrigin(0, 0.5).setScale(1.4).setVisible(false);
+    this._broccoliText = this.add.text(118, 9, '', {
+      fontSize: '9px',
+      fontFamily: 'monospace',
+      color: '#ffd54f',
     }).setOrigin(0, 0.5).setVisible(false);
 
     // Fullscreen toggle (top-right)
