@@ -27,6 +27,9 @@ func _setup_sfx() -> void:
 	add_child(_sfx_player)
 	_sfx_player.play()
 	_sfx_playback = _sfx_player.get_stream_playback()
+	# Push initial silence to avoid "cannot be sampled" warning
+	for _i in 32:
+		_sfx_playback.push_frame(Vector2.ZERO)
 
 
 func _setup_music() -> void:
@@ -38,6 +41,8 @@ func _setup_music() -> void:
 	add_child(_music_player)
 	_music_player.play()
 	_music_playback = _music_player.get_stream_playback()
+	for _i in 64:
+		_music_playback.push_frame(Vector2.ZERO)
 
 
 ## Play a named SFX. Same sound names as the JS version.

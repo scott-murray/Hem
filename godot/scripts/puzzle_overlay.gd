@@ -59,8 +59,8 @@ func _build() -> void:
 
 
 func _build_spelling(panel: Control) -> void:
-	var word := WORD_BANK[randi() % WORD_BANK.size()]
-	var hidden := randi() % word.length()
+	var word: String = WORD_BANK[randi() % WORD_BANK.size()]
+	var hidden: int = randi() % word.length()
 	_correct_letter = word[hidden]
 
 	# Title
@@ -112,7 +112,7 @@ func _build_math(panel: Control) -> void:
 	var offsets := [3, 2, 1, -1, -2, -3, 4, -4]
 	for off in offsets:
 		if distractors.size() >= 3: break
-		var v := _correct_answer - off
+		var v: int = _correct_answer - off
 		if v > 0 and v <= 18 and v != _correct_answer and v not in distractors:
 			distractors.append(v)
 	while distractors.size() < 3:
