@@ -14,7 +14,7 @@ script = ExtResource("1_game")
 [node name="Background" type="ColorRect" parent="."]
 color = Color(0.051, 0.051, 0.051, 1)
 
-[node name="GroundLayer" type="TileMapLayer" parent="."]
+[node name="GroundLayer" type="Node2D" parent="."]
 
 [node name="Entities" type="Node2D" parent="."]
 

@@ -13,15 +13,16 @@
 class_name GameController
 extends Node2D
 
-const PlayerClass     = preload("res://scripts/player.gd")
-const LevelParser     = preload("res://scripts/level_parser.gd")
+const PlayerClass      = preload("res://scripts/player.gd")
+const LevelParser      = preload("res://scripts/level_parser.gd")
+const SpriteGenerator  = preload("res://textures/sprite_generator.gd")
 
 const TILE_SIZE   := 48
 const ENEMY_SPEED := 35.0
 const LEVEL_COUNT := 5
 
 @onready var player:        Node2D            = $Player
-@onready var ground_layer:  TileMapLayer      = $GroundLayer
+@onready var ground_parent: Node2D            = $GroundLayer
 @onready var entity_parent: Node2D            = $Entities
 @onready var camera:        Camera2D          = $Camera2D
 @onready var ui:            Control           = $UI
@@ -83,19 +84,53 @@ func _build_ground() -> void:
 	for r in parsed.height_tiles:
 		for c in parsed.width_tiles:
 			var ch: String = parsed.tiles[r][c]
-			var source_id := -1
+			var tex_key := ""
+			var is_solid := false
+
 			match ch:
-				"T": source_id = 0  # grass
-				"G": source_id = 1  # ground
-				"P": source_id = 2  # platform
-				"X": source_id = 3  # diggable
+				"T": tex_key = "tile_grass";    is_solid = true
+				"G": tex_key = "tile_ground";   is_solid = true
+				"P": tex_key = "tile_platform"; is_solid = true
+				"X": tex_key = "tile_diggable"; is_solid = true
 				_:   continue
 
-			var pos := Vector2i(c, r)
-			ground_layer.set_cell(pos, source_id, Vector2i.ZERO)
+			var tex: ImageTexture = SpriteGenerator.get_texture(tex_key)
+			if not tex:
+				continue
 
-			if ch == "X":
-				diggable_tiles["%d,%d" % [r, c]] = pos
+			var px: float = c * TILE_SIZE + TILE_SIZE / 2
+			var py: float = r * TILE_SIZE + TILE_SIZE / 2
+
+			if is_solid:
+				var body := StaticBody2D.new()
+				body.position = Vector2(px, py)
+				var shape := CollisionShape2D.new()
+				shape.shape = RectangleShape2D.new()
+				shape.shape.size = Vector2(TILE_SIZE, TILE_SIZE)
+				body.add_child(shape)
+
+				var sprite := Sprite2D.new()
+				sprite.texture = tex
+				sprite.scale = Vector2(3, 3)
+				sprite.centered = true
+				body.add_child(sprite)
+
+				# Platform is one-way
+				if ch == "P":
+					body.collision_layer = 2
+					body.set_meta("one_way", true)
+
+				ground_parent.add_child(body)
+
+				if ch == "X":
+					diggable_tiles["%d,%d" % [r, c]] = body
+			else:
+				var sprite := Sprite2D.new()
+				sprite.texture = tex
+				sprite.scale = Vector2(3, 3)
+				sprite.position = Vector2(px, py)
+				sprite.centered = true
+				ground_parent.add_child(sprite)
 
 
 func _spawn_entities() -> void:
@@ -241,7 +276,8 @@ func _dig_column(start_row: int, col: int) -> void:
 		var key := "%d,%d" % [r, col]
 		if not diggable_tiles.has(key):
 			break
-		ground_layer.erase_cell(diggable_tiles[key])
+		var body: StaticBody2D = diggable_tiles[key]
+		body.queue_free()
 		diggable_tiles.erase(key)
 		parsed.tiles[r][col] = " "
 	AudioManager.play_sfx("dig")
