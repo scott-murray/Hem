@@ -4,6 +4,7 @@ const DEFAULT_PROGRESS = {
   unlockedLevel: 1,
   completedLevels: [],
   muted: false,
+  hasDigAbility: false,
 };
 
 export const storage = {
@@ -58,6 +59,17 @@ export const storage = {
   setMuted(val) {
     const data = this.load();
     data.muted = val;
+    this.save(data);
+    return data;
+  },
+
+  hasDigAbility() {
+    return this.load().hasDigAbility || false;
+  },
+
+  setDigAbility(val) {
+    const data = this.load();
+    data.hasDigAbility = val;
     this.save(data);
     return data;
   },

@@ -66,7 +66,7 @@ export class GameScene extends Phaser.Scene {
     this.activeDoors = new Map(); // puzzleId -> door sprite
     this.isWinning = false;
     this.isPaused = false;
-    this.hasDigAbility = false;
+    this.hasDigAbility = storage.hasDigAbility();
   }
 
   create() {
@@ -737,6 +737,7 @@ export class GameScene extends Phaser.Scene {
       const puzzleType = types[puzzleId % types.length];
       if (puzzleType === 'dig-teach') {
         this.hasDigAbility = true;
+        storage.setDigAbility(true);
         if (this.uiScene && this.uiScene.showDigButton) {
           this.uiScene.showDigButton();
         }
