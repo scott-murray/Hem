@@ -41,9 +41,18 @@ var has_dig_ability:   bool   = false
 
 
 func _ready() -> void:
+	print("[GameController] _ready() start")
+	# Generate textures if not done yet (in case boot.tscn was skipped)
+	if SpriteGenerator.get_texture("tile_grass") == null:
+		SpriteGenerator.generate_all()
+		print("[GameController] textures generated")
+
+	Progress.load_progress()
 	has_dig_ability = Progress.has_dig()
 	level_number = _requested_level
+	print("[GameController] loading level ", level_number)
 	_load_level(level_number)
+	print("[GameController] level loaded, tiles=", ground_parent.get_child_count())
 
 	SignalBus.try_dig.connect(_on_try_dig)
 	SignalBus.puzzle_result.connect(_on_puzzle_result)
@@ -55,12 +64,9 @@ func set_level(n: int) -> void:
 
 
 func _load_level(n: int) -> void:
-	var path := "res://shared/levels/level%d.txt" % n
-	if not FileAccess.file_exists(path):
-		push_error("Level file not found: " + path)
-		return
-
-	parsed = LevelParser.parse(FileAccess.get_file_as_string(path))
+	var map: Array = LevelData.get_map(n)
+	var raw_text := "\n".join(map)
+	parsed = LevelParser.parse(raw_text)
 	level_config = _config_for(n)
 
 	SignalBus.music_change.emit("level%d" % n)
@@ -94,7 +100,7 @@ func _build_ground() -> void:
 				"X": tex_key = "tile_diggable"; is_solid = true
 				_:   continue
 
-			var tex: ImageTexture = SpriteGenerator.get_texture(tex_key)
+			var tex: Texture2D = SpriteGenerator.get_texture(tex_key)
 			if not tex:
 				continue
 
@@ -261,6 +267,13 @@ func _setup_camera() -> void:
 	camera.limit_right  = map_width
 	camera.limit_top    = 0
 	camera.limit_bottom = map_height
+	# Position camera where the ground level is visible
+	var grass_row := 8
+	for r in parsed.height_tiles:
+		if "T" in parsed.tiles[r]:
+			grass_row = r
+			break
+	camera.position = Vector2(map_width / 2.0, grass_row * TILE_SIZE)
 
 
 func _on_try_dig() -> void:

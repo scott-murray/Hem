@@ -21,7 +21,6 @@ window/size/viewport_height=270
 window/size/mode=0
 window/stretch/mode="canvas_items"
 window/stretch/aspect="keep"
-window/stretch/scale=3.0
 
 [rendering]
 textures/canvas_textures/default_texture_filter=0
@@ -87,6 +86,7 @@ fullscreen={
 SignalBus="*res://scripts/signal_bus.gd"
 Progress="*res://scripts/progress.gd"
 AudioManager="*res://scripts/audio_manager.gd"
+LevelData="*res://scripts/level_data.gd"
 
 [editor_plugins]
 enabled=PackedStringArray()

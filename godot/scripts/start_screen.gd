@@ -84,7 +84,7 @@ func _build_title() -> void:
 
 
 func _build_bunny() -> void:
-	var tex: ImageTexture = SpriteGenerator.get_texture("bunny_idle_0")
+	var tex: Texture2D = SpriteGenerator.get_texture("bunny_idle")
 	if tex:
 		var bunny := TextureRect.new()
 		bunny.texture = tex

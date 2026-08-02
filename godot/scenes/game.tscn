@@ -27,6 +27,7 @@ shape = SubResource("CircleShape2D_12x14")
 [node name="Sprite2D" type="Sprite2D" parent="Player"]
 
 [node name="Camera2D" type="Camera2D" parent="."]
+current = true
 drag_left_margin = 80.0
 drag_right_margin = 80.0
 drag_top_margin = 40.0
