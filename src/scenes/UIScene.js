@@ -175,54 +175,61 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  // ── Three-zone touch layout ───────────────────────────────────────────
+  // ── Swipe-based touch layout ────────────────────────────────────────
   //
   //   ┌──────────────────────────────────┐
   //   │                                  │
   //   │     WALK LEFT    WALK RIGHT      │  hold (>120ms) = walk
-  //   │     (hold)        (hold)         │  tap  (<120ms) = jump in place
+  //   │     (hold)        (hold)         │
   //   │                                  │
-  //   ├──────────────────────────────────┤  y = H * 0.78
-  //   │           ══ JUMP ══            │  tap = jump (always)
+  //   │         SWIPE ↑ = JUMP           │  flick up anywhere
+  //   │         SWIPE ↓ = DIG            │  flick down anywhere
+  //   │                                  │
+  //   │      TAP (quick) = JUMP          │  tap without holding
   //   └──────────────────────────────────┘
   //
-  // This decouples walk from jump so a kid can walk without accidental hops.
+  // Decouples walk from jump. Swipe gestures replace the old jump strip
+  // and dig button — more intuitive on mobile.
 
   _buildTouchZones() {
     const HUD_H = 18;
-    const JUMP_TOP = Math.floor(H * 0.78);   // top of jump strip
-    const WALK_MID = W / 2;                    // divide left/right walk zones
-    const TAP_THRESHOLD = 120;                 // ms — shorter = tap, longer = walk
+    const WALK_MID = W / 2;
+    const TAP_THRESHOLD = 120;            // ms — shorter = tap, longer = walk
+    const SWIPE_THRESHOLD = 30;           // px — minimum vertical movement for swipe
 
-    // ── Walk zones (left / right) ─────────────────────────────────────
+    // Track pointer start positions for swipe detection
+    const pointerStart = new Map();       // pointerId → {x, y, time}
 
-    const walkLeftZone = this.add.zone(0, HUD_H, WALK_MID, JUMP_TOP - HUD_H).setOrigin(0, 0).setInteractive();
-    const walkRightZone = this.add.zone(WALK_MID, HUD_H, WALK_MID, JUMP_TOP - HUD_H).setOrigin(0, 0).setInteractive();
+    // ── Walk zones (left / right, full height) ────────────────────────
 
-    // Faint tint for discoverability
+    const walkLeftZone = this.add.zone(0, HUD_H, WALK_MID, H - HUD_H).setOrigin(0, 0).setInteractive();
+    const walkRightZone = this.add.zone(WALK_MID, HUD_H, WALK_MID, H - HUD_H).setOrigin(0, 0).setInteractive();
+
+    // Faint tint
     const tint = this.add.graphics();
     tint.fillStyle(0xffffff, 0.03);
-    tint.fillRect(0, HUD_H, WALK_MID, JUMP_TOP - HUD_H);
+    tint.fillRect(0, HUD_H, WALK_MID, H - HUD_H);
     tint.fillStyle(0x000000, 0.03);
-    tint.fillRect(WALK_MID, HUD_H, WALK_MID, JUMP_TOP - HUD_H);
+    tint.fillRect(WALK_MID, HUD_H, WALK_MID, H - HUD_H);
     tint.setDepth(-1);
 
-    // Walk-zone hint glyphs
-    this.add.text(60, JUMP_TOP - 14, '◀ HOLD', {
+    // Hint glyphs
+    this.add.text(60, H - 20, '◀ HOLD', {
       fontSize: '7px', fontFamily: 'monospace', color: '#ffffff',
     }).setOrigin(0.5).setAlpha(0.25);
-    this.add.text(W - 60, JUMP_TOP - 14, 'HOLD ▶', {
+    this.add.text(W - 60, H - 20, 'HOLD ▶', {
       fontSize: '7px', fontFamily: 'monospace', color: '#ffffff',
     }).setOrigin(0.5).setAlpha(0.25);
+    this.add.text(W / 2, H - 8, '↑ JUMP · ↓ DIG', {
+      fontSize: '7px', fontFamily: 'monospace', color: '#ffffff',
+    }).setOrigin(0.5).setAlpha(0.2);
 
-    // ── Walk-zone handlers ────────────────────────────────────────────
-    // Use delayed-call timers for tap-vs-hold detection.
-    // On pointerdown, start a timer. If the timer fires (hold ≥ threshold),
-    // activate walk. On pointerup before the timer fires, treat as a tap.
+    // ── Pointer handlers ──────────────────────────────────────────────
 
     const holdTimers = new Map(); // pointerId → Phaser.Time.TimerEvent
 
-    const walkDown = (side) => (pointer) => {
+    const pointerDown = (side) => (pointer) => {
+      pointerStart.set(pointer.id, { x: pointer.x, y: pointer.y, time: this.time.now });
       this._walkSideForPointer.set(pointer.id, side);
       this._walkActivated.delete(pointer.id);
 
@@ -235,63 +242,61 @@ export class UIScene extends Phaser.Scene {
       holdTimers.set(pointer.id, timer);
     };
 
-    const walkUp = (side) => (pointer) => {
+    const pointerUp = (side) => (pointer) => {
+      const start = pointerStart.get(pointer.id);
+      pointerStart.delete(pointer.id);
+
+      // Cancel hold timer
       const timer = holdTimers.get(pointer.id);
       if (timer) { timer.destroy(); holdTimers.delete(pointer.id); }
 
-      // Release walk state for this side
+      // Release walk
       this._walkSideForPointer.delete(pointer.id);
       const stillLeft = [...this._walkSideForPointer.values()].includes('left');
       const stillRight = [...this._walkSideForPointer.values()].includes('right');
       inputState._touchLeft = stillLeft;
       inputState._touchRight = stillRight;
 
-      // If the hold timer didn't fire, this was a quick tap → jump
-      if (!this._walkActivated.has(pointer.id)) {
-        inputState._touchJump = true;
+      // Detect swipe vs tap
+      if (start && !this._walkActivated.has(pointer.id)) {
+        const dy = pointer.y - start.y;
+        const dx = pointer.x - start.x;
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
+
+        if (absDy > SWIPE_THRESHOLD && absDy > absDx) {
+          // Vertical swipe
+          if (dy < 0) {
+            // Swipe UP → jump
+            inputState._touchJump = true;
+          } else {
+            // Swipe DOWN → dig
+            const gs = this.scene.get('GameScene');
+            if (gs && gs._tryDig) gs._tryDig();
+          }
+        } else if (absDx < SWIPE_THRESHOLD && absDy < SWIPE_THRESHOLD) {
+          // Stationary quick tap → jump
+          inputState._touchJump = true;
+        }
+        // If horizontal movement > threshold, it's a drag — ignore
       }
+
       this._walkActivated.delete(pointer.id);
     };
 
-    walkLeftZone.on('pointerdown', (pointer) => {
-      this._walkSideForPointer.set(pointer.id, 'left');
-      walkDown('left')(pointer);
-    });
-    walkRightZone.on('pointerdown', (pointer) => {
-      this._walkSideForPointer.set(pointer.id, 'right');
-      walkDown('right')(pointer);
-    });
+    walkLeftZone.on('pointerdown', pointerDown('left'));
+    walkRightZone.on('pointerdown', pointerDown('right'));
+    walkLeftZone.on('pointerup', pointerUp('left'));
+    walkRightZone.on('pointerup', pointerUp('right'));
 
-    walkLeftZone.on('pointerup', walkUp('left'));
-    walkRightZone.on('pointerup', walkUp('right'));
-
-    // Listen globally so releasing off the zone still cleans up
+    // Global cleanup — releasing off-zone still ends the gesture
     this.input.on('pointerup', (pointer) => {
       const side = this._walkSideForPointer.get(pointer.id);
-      if (side) walkUp(side)(pointer);
+      if (side) pointerUp(side)(pointer);
     });
     this.input.on('pointerupoutside', (pointer) => {
       const side = this._walkSideForPointer.get(pointer.id);
-      if (side) walkUp(side)(pointer);
-    });
-
-    // ── Jump strip (bottom, full width) ───────────────────────────────
-
-    const jumpZone = this.add.zone(0, JUMP_TOP, W, H - JUMP_TOP).setOrigin(0, 0).setInteractive();
-
-    const jumpG = this.add.graphics();
-    jumpG.fillStyle(0xffffff, 0.06);
-    jumpG.fillRect(0, JUMP_TOP, W, H - JUMP_TOP);
-    jumpG.lineStyle(1, 0xffffff, 0.1);
-    jumpG.lineBetween(0, JUMP_TOP, W, JUMP_TOP);
-    jumpG.setDepth(-1);
-
-    this.add.text(W / 2, JUMP_TOP + (H - JUMP_TOP) / 2, 'TAP TO JUMP', {
-      fontSize: '9px', fontFamily: 'monospace', color: '#ffffff',
-    }).setOrigin(0.5).setAlpha(0.3);
-
-    jumpZone.on('pointerdown', () => {
-      inputState._touchJump = true;
+      if (side) pointerUp(side)(pointer);
     });
   }
 

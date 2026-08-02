@@ -110,6 +110,10 @@ export class GameScene extends Phaser.Scene {
         this.uiScene.setLives(this.lives);
         this.uiScene.setLevelName(this.levelConfig.name);
         this.uiScene.setCarrotCount(this.collectedCarrots, this.smallCarrots.length);
+        // Restore dig button if ability is already unlocked
+        if (this.hasDigAbility) {
+          this.uiScene.showDigButton();
+        }
       }
     });
 
