@@ -6,6 +6,8 @@
 class_name Player
 extends CharacterBody2D
 
+const SpriteGenerator = preload("res://textures/sprite_generator.gd")
+
 const GRAVITY          := 1100.0
 const JUMP_VELOCITY    := -580.0
 const JUMP_CUT         := -220.0   # upward cap when jump released early
@@ -29,17 +31,22 @@ var lives          := 3
 
 
 func _ready() -> void:
-	# Set bunny sprite texture
+	# Set bunny sprite texture — use pre-rendered PNG, make it very visible
 	var tex := SpriteGenerator.get_texture("bunny_idle")
 	if tex and has_node("Sprite2D"):
 		$Sprite2D.texture = tex
-		$Sprite2D.scale = Vector2(3, 3)
+		$Sprite2D.scale = Vector2(5, 5)
 		$Sprite2D.centered = true
-	# Enable input processing on this CharacterBody2D
-	set_process_input(true)
+		$Sprite2D.visible = true
+		$Sprite2D.z_index = 100
+		$Sprite2D.modulate = Color(1, 1, 0.5)  # yellowish tint for visibility
 
 
 func _physics_process(delta: float) -> void:
+	_frame_count += 1
+	if _frame_count % 60 == 1:
+		print("[Player] frame ", _frame_count, " pos=", position, " vel=", velocity, " floor=", is_on_floor())
+
 	# Gravity
 	if not is_on_floor():
 		velocity.y += GRAVITY * delta
@@ -136,6 +143,19 @@ func apply_touch_jump() -> void:
 	jump_buffer = JUMP_BUFFER
 
 
+var _frame_count := 0
+
+## Simple direct movement in _process (bypasses physics for HTML5 compat)
+func _process(_delta: float) -> void:
+	var speed := 200.0
+	if Input.is_key_pressed(KEY_LEFT) or Input.is_key_pressed(KEY_A):
+		position.x -= speed * _delta
+	if Input.is_key_pressed(KEY_RIGHT) or Input.is_key_pressed(KEY_D):
+		position.x += speed * _delta
+	if Input.is_key_pressed(KEY_UP) or Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_SPACE):
+		position.y -= speed * _delta
+	if Input.is_key_pressed(KEY_DOWN) or Input.is_key_pressed(KEY_S):
+		position.y += speed * _delta
 var _touch_left  := false
 var _touch_right := false
 
