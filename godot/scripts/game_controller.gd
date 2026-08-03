@@ -65,17 +65,24 @@ func set_level(n: int) -> void:
 
 func _build_sky() -> void:
 	# Load pre-rendered sky gradient PNG for this level
-	var sky_path := "res://textures/gen/sky_l%d.png" % level_number
+	var sky_path: String = "res://textures/gen/sky_l%d.png" % level_number
+	print("[GameController] sky path: ", sky_path, " exists: ", ResourceLoader.exists(sky_path))
 	if ResourceLoader.exists(sky_path):
 		var tex: Texture2D = load(sky_path)
+		print("[GameController] sky tex size: ", tex.get_width(), "x", tex.get_height())
 		$SkySprite.texture = tex
 		$SkySprite.scale = Vector2(parsed.pixel_width / tex.get_width(), parsed.pixel_height / tex.get_height())
+		$SkySprite.position = Vector2.ZERO
+		print("[GameController] sky scale: ", $SkySprite.scale)
+	else:
+		print("[GameController] sky NOT FOUND, using solid color")
+		RenderingServer.set_default_clear_color(Color("4fc3f7"))
 
 func _load_level(n: int) -> void:
-	_build_sky()
 	var map: Array = LevelData.get_map(n)
 	var raw_text := "\n".join(map)
 	parsed = LevelParser.parse(raw_text)
+	_build_sky()  # must be after parsed is set
 	level_config = _config_for(n)
 
 	SignalBus.music_change.emit("level%d" % n)
