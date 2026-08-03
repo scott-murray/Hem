@@ -139,7 +139,7 @@ func _build_level_buttons() -> void:
 				btn.add_theme_color_override("font_color", Color("a5d6a7"))
 			btn.pressed.connect(_on_level_pressed.bind(level))
 		else:
-			btn.text = "🔒 L%d" % level
+			btn.text = "[Locked] L%d" % level
 
 		add_child(btn)
 
@@ -152,7 +152,7 @@ func _on_level_pressed(level: int) -> void:
 
 func _build_play_button() -> void:
 	var btn := Button.new()
-	btn.text = "▶  PLAY"
+	btn.text = ">> PLAY"
 	btn.add_theme_font_size_override("font_size", 14)
 	btn.position = Vector2((GAME_W - 140) / 2, 212)
 	btn.size = Vector2(140, 40)
@@ -168,7 +168,7 @@ func _on_play_pressed() -> void:
 func _build_bottom_buttons() -> void:
 	# Mute
 	var mute := Button.new()
-	mute.text = "🔇 MUTED" if Progress.data.muted else "🔊 SOUND"
+	mute.text = "MUTED" if Progress.data.muted else "SOUND"
 	mute.add_theme_font_size_override("font_size", 8)
 	mute.position = Vector2(20, GAME_H - 35)
 	mute.size = Vector2(80, 26)
@@ -176,13 +176,13 @@ func _build_bottom_buttons() -> void:
 		var m: bool = not Progress.data.muted
 		Progress.set_muted(m)
 		AudioManager.set_muted(m)
-		mute.text = "🔇 MUTED" if m else "🔊 SOUND"
+		mute.text = "MUTED" if m else "SOUND"
 	)
 	add_child(mute)
 
 	# Fullscreen
 	var fs := Button.new()
-	fs.text = "⛶ FULLSCR"
+	fs.text = "[ ] FULLSCR"
 	fs.add_theme_font_size_override("font_size", 8)
 	fs.position = Vector2((GAME_W - 70) / 2, GAME_H - 35)
 	fs.size = Vector2(70, 26)
@@ -196,7 +196,7 @@ func _build_bottom_buttons() -> void:
 
 	# Reset
 	var reset := Button.new()
-	reset.text = "↺ RESET"
+	reset.text = "RESET"
 	reset.add_theme_font_size_override("font_size", 8)
 	reset.position = Vector2(GAME_W - 100, GAME_H - 35)
 	reset.size = Vector2(80, 26)
@@ -206,7 +206,7 @@ func _build_bottom_buttons() -> void:
 			reset.text = "CONFIRM?"
 			get_tree().create_timer(2.0).timeout.connect(func():
 				_confirm_reset = false
-				reset.text = "↺ RESET"
+				reset.text = "RESET"
 			)
 		else:
 			Progress.reset()

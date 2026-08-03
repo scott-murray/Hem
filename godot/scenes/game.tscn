@@ -11,20 +11,25 @@ radius = 7.0
 [node name="Game" type="Node2D"]
 script = ExtResource("1_game")
 
-[node name="Background" type="ColorRect" parent="."]
-color = Color(0.051, 0.051, 0.051, 1)
+[node name="SkySprite" type="Sprite2D" parent="."]
+z_index = -10
+centered = false
 
 [node name="GroundLayer" type="Node2D" parent="."]
 
 [node name="Entities" type="Node2D" parent="."]
 
 [node name="Player" type="CharacterBody2D" parent="."]
+collision_layer = 1
+collision_mask = 1
 script = ExtResource("2_player")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Player"]
 shape = SubResource("CircleShape2D_12x14")
 
 [node name="Sprite2D" type="Sprite2D" parent="Player"]
+centered = true
+scale = Vector2(3, 3)
 
 [node name="Camera2D" type="Camera2D" parent="."]
 current = true
@@ -34,6 +39,7 @@ drag_top_margin = 40.0
 drag_bottom_margin = 40.0
 
 [node name="UI" type="CanvasLayer" parent="."]
+layer = 1
 script = ExtResource("4_ui")
 
 [node name="TouchOverlay" type="Control" parent="UI"]
@@ -41,5 +47,5 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-mouse_filter = 1
+mouse_filter = 2
 script = ExtResource("3_touch")

@@ -99,7 +99,7 @@ func _build_hud() -> void:
 
 	# Fullscreen toggle
 	var fs := Button.new()
-	fs.text = "⛶ FS"
+	fs.text = "FS"
 	fs.add_theme_font_size_override("font_size", 7)
 	fs.position = Vector2(GAME_W - 34, 2)
 	fs.size = Vector2(30, 14)

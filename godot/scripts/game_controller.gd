@@ -64,13 +64,12 @@ func set_level(n: int) -> void:
 
 
 func _build_sky() -> void:
-	# Sky background — simple solid color for now.
-	# Full gradient needs the Godot editor to set up properly
-	# (runtime ImageTexture doesn't render in HTML5 export).
-	var cfg: Dictionary = _config_for(level_number)
-	var top_color: Color = Color(cfg.bg_top) if cfg.has("bg_top") else Color("1a237e")
-	# Tint the clear color to match the level theme
-	RenderingServer.set_default_clear_color(top_color)
+	# Load pre-rendered sky gradient PNG for this level
+	var sky_path := "res://textures/gen/sky_l%d.png" % level_number
+	if ResourceLoader.exists(sky_path):
+		var tex: Texture2D = load(sky_path)
+		$SkySprite.texture = tex
+		$SkySprite.scale = Vector2(parsed.pixel_width / tex.get_width(), parsed.pixel_height / tex.get_height())
 
 func _load_level(n: int) -> void:
 	_build_sky()
@@ -120,6 +119,8 @@ func _build_ground() -> void:
 			if is_solid:
 				var body := StaticBody2D.new()
 				body.position = Vector2(px, py)
+				body.collision_layer = 1
+				body.collision_mask = 1
 				var shape := CollisionShape2D.new()
 				shape.shape = RectangleShape2D.new()
 				shape.shape.size = Vector2(TILE_SIZE, TILE_SIZE)
