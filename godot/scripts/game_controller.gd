@@ -91,6 +91,7 @@ func _load_level(n: int) -> void:
 	_build_ground()
 	_spawn_entities()
 	_setup_camera()
+	_setup_hud()
 
 
 func _config_for(n: int) -> Dictionary:
@@ -200,6 +201,8 @@ func _spawn_collectible(spec: Dictionary, texture_key: String, callback: String)
 			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	area.body_entered.connect(_on_collectible_entered.bind(callback, area))
 	entity_parent.add_child(area)
+	if texture_key == "carrot":
+		small_carrots.append(area)
 
 
 func _on_collectible_entered(body: Node2D, callback: String, self_area: Area2D) -> void:
@@ -224,14 +227,61 @@ func _on_broccoli_collected() -> void:
 func _spawn_enemy(spec: Dictionary, enemy_type: String) -> void:
 	var enemy := CharacterBody2D.new()
 	enemy.position = Vector2(spec.x, spec.y)
+	enemy.z_index = 20
 	enemy.set_meta("type", enemy_type)
 	enemy.set_meta("dir", -1)
 	enemy.set_meta("speed", ENEMY_SPEED)
 	enemy.set_meta("start_x", spec.x)
 	enemy.set_meta("patrol_range", TILE_SIZE * 4)
-	# TODO: add Sprite2D child, collision shape, patrol script
+
+	# Collision body (hurts bunny on overlap)
+	var shape := CollisionShape2D.new()
+	shape.shape = RectangleShape2D.new()
+	shape.shape.size = Vector2(TILE_SIZE * 0.7, TILE_SIZE * 0.7)
+	enemy.add_child(shape)
+
+	# Visible sprite
+	var tex_key := "enemy_fox" if enemy_type == "fox" else "enemy_beetle"
+	var tex: Texture2D = SpriteGenerator.get_texture(tex_key)
+	if tex:
+		var sprite := Sprite2D.new()
+		sprite.texture = tex
+		sprite.scale = Vector2(2.5, 2.5)
+		sprite.centered = true
+		sprite.name = "Sprite"
+		enemy.add_child(sprite)
+
 	entity_parent.add_child(enemy)
 	enemies.append(enemy)
+
+
+## Enemy patrol — move side to side within range, flip at edges.
+func _process_enemies(delta: float) -> void:
+	for enemy in enemies:
+		if not is_instance_valid(enemy):
+			continue
+		var dir: int = enemy.get_meta("dir")
+		var speed: float = enemy.get_meta("speed")
+		var start_x: float = enemy.get_meta("start_x")
+		var patrol_range: float = enemy.get_meta("patrol_range")
+
+		enemy.position.x += dir * speed * delta
+
+		# Flip at patrol bounds
+		var dist: float = absf(enemy.position.x - start_x)
+		if dist > patrol_range:
+			enemy.set_meta("dir", -dir)
+			enemy.position.x = clampf(enemy.position.x, start_x - patrol_range, start_x + patrol_range)
+
+		# Flip sprite
+		if enemy.has_node("Sprite"):
+			enemy.get_node("Sprite2D" if enemy.has_node("Sprite2D") else "Sprite").flip_h = dir > 0
+
+		# Contact damage — distance check vs player
+		if player and player.is_invuln == false:
+			var d: Vector2 = enemy.position - player.position
+			if d.length() < TILE_SIZE * 0.6:
+				player.hurt(-1.0 if player.facing_right else 1.0)
 
 
 func _spawn_puzzle_zone(spec: Dictionary) -> void:
@@ -371,6 +421,16 @@ func _spawn_exit_carrot(spec: Dictionary) -> void:
 	entity_parent.add_child(area)
 
 
+func _setup_hud() -> void:
+	var ui_node: CanvasLayer = $UI
+	if not ui_node:
+		return
+	ui_node.set_level_name(str(level_config.name))
+	ui_node.set_carrot_count(0, small_carrots.size())
+	ui_node.set_broccoli_count(0)
+	print("[GameController] HUD: ", level_config.name, " carrots=", small_carrots.size())
+
+
 func _setup_camera() -> void:
 	var map_width:  float = parsed.pixel_width
 	var map_height: float = parsed.pixel_height
@@ -404,10 +464,11 @@ func _dig_column(start_row: int, col: int) -> void:
 	AudioManager.play_sfx("dig")
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	# Camera follows the player every frame
 	if camera and player:
 		camera.position = player.position
+	_process_enemies(delta)
 	if Input.is_action_just_pressed("dig"):
 		_on_try_dig()
 	if Input.is_action_just_pressed("fullscreen"):

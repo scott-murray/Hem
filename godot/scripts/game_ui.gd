@@ -121,6 +121,28 @@ func set_level_name(name: String) -> void:
 	_level_label.text = name
 
 
+func set_carrot_count(got: int, total: int) -> void:
+	if total == 0:
+		_carrot_icon.visible = false
+		_carrot_label.visible = false
+		return
+	_carrot_icon.visible = true
+	_carrot_label.visible = true
+	_carrot_label.text = "%d/%d" % [got, total]
+	if got >= total:
+		_carrot_label.add_theme_color_override("font_color", Color("ffd54f"))
+
+
+func set_broccoli_count(got: int) -> void:
+	if got == 0:
+		_broccoli_icon.visible = false
+		_broccoli_label.visible = false
+		return
+	_broccoli_icon.visible = true
+	_broccoli_label.visible = true
+	_broccoli_label.text = str(got)
+
+
 func _on_carrot(got: int, total: int) -> void:
 	if total == 0:
 		_carrot_icon.visible = false
