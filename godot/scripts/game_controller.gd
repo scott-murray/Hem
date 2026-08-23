@@ -285,13 +285,10 @@ func _setup_camera() -> void:
 	camera.limit_right  = map_width
 	camera.limit_top    = 0
 	camera.limit_bottom = map_height
-	# Position camera where the ground level is visible
-	var grass_row := 8
-	for r in parsed.height_tiles:
-		if "T" in parsed.tiles[r]:
-			grass_row = r
-			break
-	camera.position = Vector2(map_width / 2.0, grass_row * TILE_SIZE)
+	# Follow the player like Phaser's startFollow()
+	camera.position_smoothing_enabled = true
+	camera.position_smoothing_speed = 5.0
+	camera.position = player.position
 
 
 func _on_try_dig() -> void:
@@ -315,6 +312,9 @@ func _dig_column(start_row: int, col: int) -> void:
 
 
 func _process(_delta: float) -> void:
+	# Camera follows the player every frame
+	if camera and player:
+		camera.position = player.position
 	if Input.is_action_just_pressed("dig"):
 		_on_try_dig()
 	if Input.is_action_just_pressed("fullscreen"):

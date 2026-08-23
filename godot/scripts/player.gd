@@ -32,14 +32,14 @@ var lives          := 3
 
 func _ready() -> void:
 	# Set bunny sprite texture — use pre-rendered PNG, make it very visible
+	z_index = 100  # render Player ABOVE the ground layer
 	var tex := SpriteGenerator.get_texture("bunny_idle")
 	if tex and has_node("Sprite2D"):
 		$Sprite2D.texture = tex
 		$Sprite2D.scale = Vector2(5, 5)
 		$Sprite2D.centered = true
 		$Sprite2D.visible = true
-		$Sprite2D.z_index = 100
-		$Sprite2D.modulate = Color(1, 1, 0.5)  # yellowish tint for visibility
+		$Sprite2D.modulate = Color.WHITE  # restore natural colors
 
 
 func _physics_process(delta: float) -> void:
