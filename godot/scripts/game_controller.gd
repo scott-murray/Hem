@@ -177,10 +177,25 @@ func _spawn_entities() -> void:
 func _spawn_collectible(spec: Dictionary, texture_key: String, callback: String) -> void:
 	var area := Area2D.new()
 	area.position = Vector2(spec.x, spec.y)
+	area.z_index = 50
 	var shape := CollisionShape2D.new()
 	shape.shape = CircleShape2D.new()
-	shape.shape.radius = 12.0
+	shape.shape.radius = 14.0
 	area.add_child(shape)
+	# Visible sprite (was missing before!)
+	var tex: Texture2D = SpriteGenerator.get_texture(texture_key)
+	if tex:
+		var sprite := Sprite2D.new()
+		sprite.texture = tex
+		sprite.scale = Vector2(2.5, 2.5) if texture_key == "carrot" else Vector2(2, 2)
+		sprite.centered = true
+		area.add_child(sprite)
+		# Bob animation
+		var tween := area.create_tween().set_loops()
+		tween.tween_property(area, "position:y", area.position.y - 4, 0.6) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tween.tween_property(area, "position:y", area.position.y, 0.6) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	area.body_entered.connect(_on_collectible_entered.bind(callback, area))
 	entity_parent.add_child(area)
 
@@ -220,10 +235,19 @@ func _spawn_enemy(spec: Dictionary, enemy_type: String) -> void:
 func _spawn_puzzle_zone(spec: Dictionary) -> void:
 	var area := Area2D.new()
 	area.position = Vector2(spec.x, spec.y)
+	area.z_index = 40
 	var shape := CollisionShape2D.new()
 	shape.shape = RectangleShape2D.new()
-	shape.shape.size = Vector2(TILE_SIZE, TILE_SIZE)
+	shape.shape.size = Vector2(TILE_SIZE * 0.8, TILE_SIZE * 0.8)
 	area.add_child(shape)
+	# Visible question-mark tile
+	var tex: Texture2D = SpriteGenerator.get_texture("tile_puzzle")
+	if tex:
+		var sprite := Sprite2D.new()
+		sprite.texture = tex
+		sprite.scale = Vector2(3, 3)
+		sprite.centered = true
+		area.add_child(sprite)
 	area.set_meta("puzzle_id", spec.id)
 	area.body_entered.connect(_on_puzzle_entered.bind(spec.id))
 	entity_parent.add_child(area)

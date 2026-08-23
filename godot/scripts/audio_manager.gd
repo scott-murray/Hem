@@ -4,18 +4,29 @@
 extends Node
 
 const SAMPLE_RATE := 44100.0
+const BPM := 112.0
+const STEP_DUR := 60.0 / BPM / 4.0  # 16th note seconds
+
+# Simple looping melody (MIDI notes, -1 = rest)
+const MELODY := [72, -1, 76, -1, 79, -1, 84, -1, 83, -1, 79, -1, 76, -1, 74, -1]
+const BASS   := [36, -1, -1, -1, 43, -1, -1, -1, 41, -1, -1, -1, 43, -1, -1, -1]
 
 var _muted := false
 var _sfx_player: AudioStreamPlayer
 var _music_player: AudioStreamPlayer
 var _sfx_playback: AudioStreamGeneratorPlayback
 var _music_playback: AudioStreamGeneratorPlayback
+var _step_idx := 0
+var _step_time := 0.0
+var _sample_time := 0.0
 
 
 func _ready() -> void:
 	_muted = Progress.data.muted
 	_setup_sfx()
 	_setup_music()
+	# Start music once audio is unlocked (first user gesture)
+	SignalBus.music_change.connect(func(_t: String): _start_music())
 
 
 func _setup_sfx() -> void:
@@ -64,6 +75,58 @@ func play_sfx(name: String) -> void:
 
 func set_muted(val: bool) -> void:
 	_muted = val
+
+
+## Continuous music synthesis — called from _process.
+func _process(delta: float) -> void:
+	if _muted or not _music_playback:
+		return
+	# Advance the 16-step sequencer
+	_step_time += delta
+	while _step_time >= STEP_DUR:
+		_step_time -= STEP_DUR
+		_step_idx = (_step_idx + 1) % MELODY.size()
+	# Push synthesized samples
+	_sample_time += delta
+	var to_push := _music_playback.get_frames_available()
+	if to_push <= 0:
+		return
+	var batch := mini(to_push, 2048)
+	for i in batch:
+		var t := _sample_time - delta + float(i) / SAMPLE_RATE
+		var sample := _music_sample(t)
+		_music_playback.push_frame(Vector2(sample, sample))
+
+
+func _music_sample(t: float) -> float:
+	var s := 0.0
+	var lead: int = MELODY[_step_idx]
+	var bass: int = BASS[_step_idx]
+	if lead >= 0:
+		s += _square(midi_to_freq(lead), t) * 0.08
+	if bass >= 0:
+		s += _square(midi_to_freq(bass), t) * 0.10
+	return clampf(s, -0.5, 0.5)
+
+
+func _start_music() -> void:
+	_step_idx = 0
+	_step_time = 0.0
+
+
+func midi_to_freq(m: int) -> float:
+	return 440.0 * pow(2.0, (m - 69) / 12.0)
+
+
+func _square(freq: float, t: float) -> float:
+	var step_dur := 60.0 / BPM / 4.0
+	var step_t := fmod(t, step_dur) / step_dur
+	var env := 1.0 - step_t
+	if env <= 0.0:
+		return 0.0
+	var ph := fmod(freq * t, 1.0)
+	var wave := 1.0 if ph < 0.5 else -1.0
+	return wave * env * 0.6
 
 
 ## --- Synthesis helpers ---

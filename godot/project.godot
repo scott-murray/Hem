@@ -32,6 +32,10 @@ window/stretch/mode="canvas_items"
 
 enabled=PackedStringArray()
 
+[gui]
+
+theme/custom="res://theme.tres"
+
 [input]
 
 jump={
