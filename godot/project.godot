@@ -33,10 +33,6 @@ window/stretch/aspect="keep"
 
 enabled=PackedStringArray()
 
-[gui]
-
-theme/custom="res://theme.tres"
-
 [input]
 
 jump={

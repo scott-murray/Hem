@@ -140,10 +140,9 @@ func _build_ground() -> void:
 				sprite.centered = true
 				body.add_child(sprite)
 
-				# Platform is one-way
+				# Platform is one-way (pass through from below, land on top)
 				if ch == "P":
-					body.collision_layer = 2
-					body.set_meta("one_way", true)
+					shape.one_way_collision = true
 
 				ground_parent.add_child(body)
 
@@ -188,7 +187,8 @@ func _spawn_collectible(spec: Dictionary, texture_key: String, callback: String)
 	if tex:
 		var sprite := Sprite2D.new()
 		sprite.texture = tex
-		sprite.scale = Vector2(2.5, 2.5) if texture_key == "carrot" else Vector2(2, 2)
+		# Match web scale: small carrot = 0.55 * 3 = 1.65, broccoli = 1.5
+		sprite.scale = Vector2(1.65, 1.65) if texture_key == "carrot" else Vector2(1.5, 1.5)
 		sprite.centered = true
 		area.add_child(sprite)
 		# Bob animation
@@ -273,7 +273,7 @@ func _launch_puzzle(ptype: String, puzzle_id: int) -> void:
 	var overlay := Control.new()
 	overlay.set_script(PuzzleOverlayScript)
 	overlay.size = Vector2(480, 270)
-	overlay.position = Vector2.ZERO
+	overlay.position = Vector2.ZERO  # viewport-stretch layout space is 480x270
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	$UI.add_child(overlay)
 	print("[GameController] overlay script: ", overlay.get_script())

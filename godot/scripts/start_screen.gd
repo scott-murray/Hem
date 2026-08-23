@@ -11,9 +11,14 @@ const GAME_H := 270.0
 const LEVEL_NAMES := ["Carrot Valley", "Fox Forest", "Crystal Caves", "Burrow Depths", "Sky Gardens"]
 
 var _confirm_reset := false
+var _stage: Control
 
 
 func _ready() -> void:
+	# With viewport stretch mode the Control layout space IS 480x270,
+	# matching the web version coordinates — no stage centering needed.
+	_stage = self
+
 	AudioManager.set_muted(Progress.data.muted)
 	SignalBus.music_change.emit("title")
 	_build_background()
@@ -39,7 +44,7 @@ func _build_background() -> void:
 		strip.offset_top = i * (GAME_H / steps)
 		strip.offset_bottom = (i + 1) * (GAME_H / steps) + 1
 		bg.add_child(strip)
-	add_child(bg)
+	_stage.add_child(bg)
 
 	# Stars (small white rects)
 	for star in [[30,20],[80,45],[150,15],[200,60],[280,25],[340,50],[400,20],[450,40],[120,80],[320,75]]:
@@ -54,13 +59,13 @@ func _build_background() -> void:
 	ground.color = Color("1b5e20")
 	ground.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	ground.offset_top = -40
-	add_child(ground)
+	_stage.add_child(ground)
 	var grass := ColorRect.new()
 	grass.color = Color("4caf50")
 	grass.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	grass.offset_top = -40
 	grass.offset_bottom = -32
-	add_child(grass)
+	_stage.add_child(grass)
 
 
 func _build_title() -> void:
@@ -71,7 +76,7 @@ func _build_title() -> void:
 	title1.position = Vector2(GAME_W / 2 - 60, 28)
 	title1.size = Vector2(120, 30)
 	title1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	add_child(title1)
+	_stage.add_child(title1)
 
 	var title2 := Label.new()
 	title2.text = "CARROT QUEST"
@@ -80,7 +85,7 @@ func _build_title() -> void:
 	title2.position = Vector2(GAME_W / 2 - 110, 56)
 	title2.size = Vector2(220, 34)
 	title2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	add_child(title2)
+	_stage.add_child(title2)
 
 
 func _build_bunny() -> void:
@@ -92,7 +97,7 @@ func _build_bunny() -> void:
 		bunny.stretch_mode = TextureRect.STRETCH_KEEP
 		bunny.position = Vector2(GAME_W / 2 - 24, GAME_H - 84)
 		bunny.size = Vector2(48, 48)
-		add_child(bunny)
+		_stage.add_child(bunny)
 
 
 func _build_level_buttons() -> void:
@@ -103,7 +108,7 @@ func _build_level_buttons() -> void:
 	label.position = Vector2(GAME_W / 2 - 50, 105)
 	label.size = Vector2(100, 16)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	add_child(label)
+	_stage.add_child(label)
 
 	var btn_w := 84.0
 	var btn_h := 34.0
@@ -141,7 +146,7 @@ func _build_level_buttons() -> void:
 		else:
 			btn.text = "[Locked] L%d" % level
 
-		add_child(btn)
+		_stage.add_child(btn)
 
 
 func _on_level_pressed(level: int) -> void:
@@ -157,7 +162,7 @@ func _build_play_button() -> void:
 	btn.position = Vector2((GAME_W - 140) / 2, 212)
 	btn.size = Vector2(140, 40)
 	btn.pressed.connect(_on_play_pressed)
-	add_child(btn)
+	_stage.add_child(btn)
 
 
 func _on_play_pressed() -> void:
@@ -178,7 +183,7 @@ func _build_bottom_buttons() -> void:
 		AudioManager.set_muted(m)
 		mute.text = "MUTED" if m else "SOUND"
 	)
-	add_child(mute)
+	_stage.add_child(mute)
 
 	# Fullscreen
 	var fs := Button.new()
@@ -192,7 +197,7 @@ func _build_bottom_buttons() -> void:
 		else:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 	)
-	add_child(fs)
+	_stage.add_child(fs)
 
 	# Reset
 	var reset := Button.new()
@@ -212,7 +217,7 @@ func _build_bottom_buttons() -> void:
 			Progress.reset()
 			get_tree().reload_current_scene()
 	)
-	add_child(reset)
+	_stage.add_child(reset)
 
 
 func _get_fullscreen() -> void:
