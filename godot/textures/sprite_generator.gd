@@ -22,6 +22,7 @@ static func generate_all() -> void:
 		"carrot", "broccoli",
 		"particle_dust", "particle_sparkle",
 		"heart_full", "heart_empty",
+		"tile_checkpoint_off", "tile_checkpoint_on",
 	]
 	for name in files:
 		var path: String = dir + "/" + name + ".png"

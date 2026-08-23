@@ -37,7 +37,9 @@ var collected_broccolis: int  = 0
 var enemies:           Array  = []
 var solved_puzzles:    Array  = []
 var diggable_tiles:    Dictionary = {}  # "r,c" -> StaticBody2D
+var checkpoint_flags:  Dictionary = {}  # col -> Sprite2D
 var has_dig_ability:   bool   = false
+static var requested_level := 1  # set by start screen before scene change
 
 
 func _ready() -> void:
@@ -49,7 +51,7 @@ func _ready() -> void:
 
 	Progress.load_progress()
 	has_dig_ability = Progress.has_dig()
-	level_number = _requested_level
+	level_number = requested_level
 	print("[GameController] loading level ", level_number)
 	_load_level(level_number)
 	print("[GameController] level loaded, tiles=", ground_parent.get_child_count())
@@ -59,9 +61,8 @@ func _ready() -> void:
 	SignalBus.puzzle_triggered.connect(_launch_puzzle)
 
 
-var _requested_level := 1
 func set_level(n: int) -> void:
-	_requested_level = n
+	requested_level = n
 
 
 func _build_sky() -> void:
@@ -324,17 +325,27 @@ func _spawn_door(spec: Dictionary) -> void:
 
 
 func _spawn_checkpoint(spec: Dictionary) -> void:
-	# Simple checkpoint visual — flag post drawn as a sprite
+	# Checkpoint flag (2x-tall sprite, off state)
 	var marker := Sprite2D.new()
-	marker.position = Vector2(spec.x, spec.y)
+	marker.position = Vector2(spec.x, spec.y - TILE_SIZE / 2)
 	marker.z_index = 30
-	var tex: Texture2D = SpriteGenerator.get_texture("tile_puzzle")
+	var tex: Texture2D = SpriteGenerator.get_texture("tile_checkpoint_off")
 	if tex:
 		marker.texture = tex
-		marker.scale = Vector2(1.5, 1.5)
+		marker.scale = Vector2(2, 2)  # 16x32 src -> 32x64 display
 		marker.centered = true
-		marker.modulate = Color(0.5, 1.0, 0.5)  # green tint
 	entity_parent.add_child(marker)
+	checkpoint_flags[spec.col] = marker
+
+
+## Checkpoint activation — turns flag orange, saves respawn point.
+func _activate_checkpoint(col: int) -> void:
+	if checkpoint_flags.has(col):
+		var flag: Sprite2D = checkpoint_flags[col]
+		var on_tex: Texture2D = SpriteGenerator.get_texture("tile_checkpoint_on")
+		if on_tex:
+			flag.texture = on_tex
+	checkpoint_flags.erase(col)
 
 
 func _spawn_exit_carrot(spec: Dictionary) -> void:

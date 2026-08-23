@@ -5,6 +5,7 @@
 extends Control
 
 const SpriteGenerator = preload("res://textures/sprite_generator.gd")
+const GameController = preload("res://scripts/game_controller.gd")
 
 const GAME_W := 480.0
 const GAME_H := 270.0
@@ -151,8 +152,8 @@ func _build_level_buttons() -> void:
 
 func _on_level_pressed(level: int) -> void:
 	_get_fullscreen()
+	GameController.requested_level = level
 	get_tree().change_scene_to_file("res://scenes/game.tscn")
-	# TODO: pass level number to game scene (set on an autoload or global)
 
 
 func _build_play_button() -> void:
@@ -167,6 +168,7 @@ func _build_play_button() -> void:
 
 func _on_play_pressed() -> void:
 	_get_fullscreen()
+	GameController.requested_level = Progress.data.unlocked_level
 	get_tree().change_scene_to_file("res://scenes/game.tscn")
 
 
