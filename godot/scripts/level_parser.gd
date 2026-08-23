@@ -38,9 +38,14 @@ const BURROW_DIGITS := [0x31, 0x32, 0x33, 0x34]  # '1'..'4'
 
 
 static func parse(raw_text: String) -> Dictionary:
-	var rows := raw_text.strip_edges().split("\n")
-	var height_tiles := rows.size()
-	var width_tiles := rows[0].length()
+	# IMPORTANT: do NOT strip_edges() the whole string — leading rows of
+	# all-spaces are valid sky and the first content row's leading spaces
+	# are part of the map. Only drop trailing empty rows from the split.
+	var rows: Array = Array(raw_text.split("\n"))
+	while rows.size() > 0 and str(rows[rows.size() - 1]).strip_edges() == "":
+		rows.pop_back()
+	var height_tiles: int = rows.size()
+	var width_tiles: int = str(rows[0]).length()
 	var tiles: Array[Array] = []
 	var specials: Array[Dictionary] = []
 	var bunny_spawn := Vector2(TILE_SIZE * 1.5, TILE_SIZE * 1.5)
@@ -61,15 +66,16 @@ static func parse(raw_text: String) -> Dictionary:
 	for r in height_tiles:
 		var row_arr: Array[String] = []
 		for c in width_tiles:
-			row_arr.append(rows[r][c])
+			row_arr.append(str(rows[r])[c])
 		tiles.append(row_arr)
 
 	# Second pass: collect specials
 	for r in height_tiles:
 		for c in width_tiles:
-			var ch := rows[r].unicode_at(c)
-			var x := c * TILE_SIZE + TILE_SIZE / 2
-			var y := r * TILE_SIZE + TILE_SIZE / 2
+			var row_str: String = str(rows[r])
+			var ch: int = row_str.unicode_at(c)
+			var x: float = c * TILE_SIZE + TILE_SIZE / 2
+			var y: float = r * TILE_SIZE + TILE_SIZE / 2
 
 			match ch:
 				Tile.BUNNY:
