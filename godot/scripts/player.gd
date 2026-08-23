@@ -9,7 +9,7 @@ extends CharacterBody2D
 const SpriteGenerator = preload("res://textures/sprite_generator.gd")
 
 const GRAVITY      := 1100.0
-const JUMP_VELOCITY := -580.0
+const JUMP_VELOCITY := -620.0  # extra margin vs Phaser (-580) for frame-based physics
 const JUMP_CUT     := -220.0
 const RUN_SPEED    := 150.0
 const ACCEL        := 1500.0
@@ -39,6 +39,9 @@ func _ready() -> void:
 		$Sprite2D.texture = tex
 		$Sprite2D.scale = Vector2(3, 3)
 		$Sprite2D.centered = true
+		# Align sprite feet with collision circle bottom:
+		# collision radius 7 vs sprite half-height 24 -> offset up 17px
+		$Sprite2D.position = Vector2(0, -17)
 
 
 func _physics_process(delta: float) -> void:

@@ -18,11 +18,13 @@ var _correct_letter: String
 var _correct_answer: int
 
 
-func setup(ptype: String, pid: int) -> void:
+func show_puzzle(ptype: String, pid: int) -> void:
+	print("[PuzzleOverlay] setup called type=", ptype)
 	_puzzle_type = ptype
 	_puzzle_id   = pid
 	_clear_children()
 	_build()
+	print("[PuzzleOverlay] build done, children=", get_child_count())
 
 
 func _clear_children() -> void:
@@ -59,6 +61,7 @@ func _build() -> void:
 
 
 func _build_spelling(panel: Control) -> void:
+	print("[PuzzleOverlay] _build_spelling called")
 	var word: String = WORD_BANK[randi() % WORD_BANK.size()]
 	var hidden: int = randi() % word.length()
 	_correct_letter = word[hidden]
@@ -79,11 +82,13 @@ func _build_spelling(panel: Control) -> void:
 	var distractors: Array[String] = []
 	var alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	while distractors.size() < 3:
-		var d := alphabet[randi() % 26]
+		var d: String = alphabet[randi() % 26]
 		if d != _correct_letter and d not in distractors:
 			distractors.append(d)
 
-	var choices: Array[String] = [_correct_letter] + distractors
+	var choices: Array[String] = []
+	choices.append(_correct_letter)
+	choices.append_array(distractors)
 	choices.shuffle()
 
 	# 2x2 button grid
@@ -94,9 +99,8 @@ func _build_spelling(panel: Control) -> void:
 		var col := i % 2; var row := i / 2
 		var bx := start_x + col * (btn_w + gap)
 		var by := PANEL_Y + 100 + row * 48
-		_add_answer_button(bx, by, btn_w, btn_h, choices[i], func():
-			_on_answer(choices[i] == _correct_letter)
-		)
+		_add_answer_button(bx, by, btn_w, btn_h, choices[i],
+			_on_answer.bind(choices[i] == _correct_letter))
 
 
 func _build_math(panel: Control) -> void:
@@ -130,9 +134,8 @@ func _build_math(panel: Control) -> void:
 		var col := i % 2; var row := i / 2
 		var bx := start_x + col * (btn_w + gap)
 		var by := PANEL_Y + 100 + row * 48
-		_add_answer_button(bx, by, btn_w, btn_h, str(choices[i]), func():
-			_on_answer(choices[i] == _correct_answer)
-		)
+		_add_answer_button(bx, by, btn_w, btn_h, str(choices[i]),
+			_on_answer.bind(choices[i] == _correct_answer))
 
 
 func _build_dig_teach(panel: Control) -> void:
@@ -173,6 +176,7 @@ func _add_label(parent: Control, text: String, x: float, y: float, size: int, co
 
 ## Helper to add a clickable answer button.
 func _add_answer_button(x: float, y: float, w: float, h: float, label: String, callback: Callable) -> void:
+	print("[PuzzleOverlay] adding button ", label, " at ", x, ",", y)
 	var btn := Button.new()
 	btn.text = label
 	btn.add_theme_font_size_override("font_size", 18)

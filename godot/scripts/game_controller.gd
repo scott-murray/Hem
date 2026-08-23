@@ -56,6 +56,7 @@ func _ready() -> void:
 
 	SignalBus.try_dig.connect(_on_try_dig)
 	SignalBus.puzzle_result.connect(_on_puzzle_result)
+	SignalBus.puzzle_triggered.connect(_launch_puzzle)
 
 
 var _requested_level := 1
@@ -254,11 +255,30 @@ func _spawn_puzzle_zone(spec: Dictionary) -> void:
 
 
 func _on_puzzle_entered(body: Node2D, puzzle_id: int) -> void:
+	print("[GameController] puzzle entered! body=", body.name, " id=", puzzle_id)
 	if not body is PlayerClass: return
 	if puzzle_id in solved_puzzles: return
 	var types: Array = level_config.puzzle_types
 	var ptype: String = types[puzzle_id % types.size()]
+	print("[GameController] launching puzzle type ", ptype)
 	SignalBus.puzzle_triggered.emit(ptype, puzzle_id)
+
+
+## Launch the puzzle overlay when the bunny steps on a puzzle tile.
+const PuzzleOverlayScript := preload("res://scripts/puzzle_overlay.gd")
+
+
+func _launch_puzzle(ptype: String, puzzle_id: int) -> void:
+	# Build the overlay programmatically (avoids .tscn script-attach issues)
+	var overlay := Control.new()
+	overlay.set_script(PuzzleOverlayScript)
+	overlay.size = Vector2(480, 270)
+	overlay.position = Vector2.ZERO
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	$UI.add_child(overlay)
+	print("[GameController] overlay script: ", overlay.get_script())
+	overlay.show_puzzle(ptype, puzzle_id)
+	print("[GameController] overlay children=", overlay.get_child_count())
 
 
 func _on_puzzle_result(success: bool, puzzle_id: int) -> void:
@@ -284,22 +304,60 @@ func _on_puzzle_result(success: bool, puzzle_id: int) -> void:
 func _spawn_door(spec: Dictionary) -> void:
 	var body := StaticBody2D.new()
 	body.position = Vector2(spec.x, spec.y)
+	body.z_index = 30
+	body.collision_layer = 1
+	body.collision_mask = 1
 	var shape := CollisionShape2D.new()
 	shape.shape = RectangleShape2D.new()
 	shape.shape.size = Vector2(TILE_SIZE * 0.8, TILE_SIZE * 0.9)
 	body.add_child(shape)
+	# Visible door sprite (was invisible before!)
+	var tex: Texture2D = SpriteGenerator.get_texture("tile_door")
+	if tex:
+		var sprite := Sprite2D.new()
+		sprite.texture = tex
+		sprite.scale = Vector2(3, 3)
+		sprite.centered = true
+		body.add_child(sprite)
 	body.set_meta("door_id", spec.id)
 	entity_parent.add_child(body)
 
 
 func _spawn_checkpoint(spec: Dictionary) -> void:
-	# TODO: checkpoint flag sprite + activation logic
-	pass
+	# Simple checkpoint visual — flag post drawn as a sprite
+	var marker := Sprite2D.new()
+	marker.position = Vector2(spec.x, spec.y)
+	marker.z_index = 30
+	var tex: Texture2D = SpriteGenerator.get_texture("tile_puzzle")
+	if tex:
+		marker.texture = tex
+		marker.scale = Vector2(1.5, 1.5)
+		marker.centered = true
+		marker.modulate = Color(0.5, 1.0, 0.5)  # green tint
+	entity_parent.add_child(marker)
 
 
 func _spawn_exit_carrot(spec: Dictionary) -> void:
-	# TODO: big carrot sprite + win condition
-	pass
+	var area := Area2D.new()
+	area.position = Vector2(spec.x, spec.y)
+	area.z_index = 50
+	var shape := CollisionShape2D.new()
+	shape.shape = CircleShape2D.new()
+	shape.shape.radius = 16.0
+	area.add_child(shape)
+	var tex: Texture2D = SpriteGenerator.get_texture("carrot")
+	if tex:
+		var sprite := Sprite2D.new()
+		sprite.texture = tex
+		sprite.scale = Vector2(3, 3)
+		sprite.centered = true
+		area.add_child(sprite)
+	area.body_entered.connect(func(_b: Node2D):
+		AudioManager.play_sfx("win")
+		Progress.complete_level(level_number)
+		get_tree().change_scene_to_file.call_deferred("res://scenes/start_screen.tscn")
+	)
+	entity_parent.add_child(area)
 
 
 func _setup_camera() -> void:
