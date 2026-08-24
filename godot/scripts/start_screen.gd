@@ -72,7 +72,7 @@ func _build_background() -> void:
 func _build_title() -> void:
 	var title1 := Label.new()
 	title1.text = "BUNNY'S"
-	title1.add_theme_font_size_override("font_size", 14)
+	title1.add_theme_font_size_override("font_size", 24)
 	title1.add_theme_color_override("font_color", Color("ffee58"))
 	title1.position = Vector2(GAME_W / 2 - 60, 28)
 	title1.size = Vector2(120, 30)
@@ -81,7 +81,7 @@ func _build_title() -> void:
 
 	var title2 := Label.new()
 	title2.text = "CARROT QUEST"
-	title2.add_theme_font_size_override("font_size", 16)
+	title2.add_theme_font_size_override("font_size", 28)
 	title2.add_theme_color_override("font_color", Color("ff7043"))
 	title2.position = Vector2(GAME_W / 2 - 110, 56)
 	title2.size = Vector2(220, 34)
@@ -104,7 +104,7 @@ func _build_bunny() -> void:
 func _build_level_buttons() -> void:
 	var label := Label.new()
 	label.text = "SELECT LEVEL"
-	label.add_theme_font_size_override("font_size", 7)
+	label.add_theme_font_size_override("font_size", 11)
 	label.add_theme_color_override("font_color", Color("c5cae9"))
 	label.position = Vector2(GAME_W / 2 - 50, 105)
 	label.size = Vector2(100, 16)
@@ -137,7 +137,7 @@ func _build_level_buttons() -> void:
 		btn.position = Vector2(bx, row_y)
 		btn.size = Vector2(btn_w, btn_h)
 		btn.text = "L%d\n%s" % [level, LEVEL_NAMES[i]]
-		btn.add_theme_font_size_override("font_size", 6)
+		btn.add_theme_font_size_override("font_size", 8)
 		btn.disabled = not unlocked
 
 		if unlocked:
@@ -159,7 +159,7 @@ func _on_level_pressed(level: int) -> void:
 func _build_play_button() -> void:
 	var btn := Button.new()
 	btn.text = ">> PLAY"
-	btn.add_theme_font_size_override("font_size", 9)
+	btn.add_theme_font_size_override("font_size", 14)
 	btn.position = Vector2((GAME_W - 140) / 2, 212)
 	btn.size = Vector2(140, 40)
 	btn.pressed.connect(_on_play_pressed)
@@ -176,7 +176,7 @@ func _build_bottom_buttons() -> void:
 	# Mute
 	var mute := Button.new()
 	mute.text = "MUTED" if Progress.data.muted else "SOUND"
-	mute.add_theme_font_size_override("font_size", 6)
+	mute.add_theme_font_size_override("font_size", 8)
 	mute.position = Vector2(20, GAME_H - 35)
 	mute.size = Vector2(80, 26)
 	mute.pressed.connect(func():
@@ -190,7 +190,7 @@ func _build_bottom_buttons() -> void:
 	# Fullscreen
 	var fs := Button.new()
 	fs.text = "[ ] FULLSCR"
-	fs.add_theme_font_size_override("font_size", 6)
+	fs.add_theme_font_size_override("font_size", 8)
 	fs.position = Vector2((GAME_W - 70) / 2, GAME_H - 35)
 	fs.size = Vector2(70, 26)
 	fs.pressed.connect(func():
@@ -204,7 +204,7 @@ func _build_bottom_buttons() -> void:
 	# Reset
 	var reset := Button.new()
 	reset.text = "RESET"
-	reset.add_theme_font_size_override("font_size", 6)
+	reset.add_theme_font_size_override("font_size", 8)
 	reset.position = Vector2(GAME_W - 100, GAME_H - 35)
 	reset.size = Vector2(80, 26)
 	reset.pressed.connect(func():

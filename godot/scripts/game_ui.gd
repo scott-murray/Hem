@@ -39,7 +39,7 @@ func _build_hud() -> void:
 
 	# Level name
 	_level_label = Label.new()
-	_level_label.add_theme_font_size_override("font_size", 7)
+	_level_label.add_theme_font_size_override("font_size", 9)
 	_level_label.add_theme_color_override("font_color", Color.WHITE)
 	_level_label.position = Vector2(GAME_W / 2 - 60, 2)
 	_level_label.size = Vector2(120, 14)
@@ -75,7 +75,7 @@ func _build_hud() -> void:
 	_stage.add_child(_carrot_icon)
 
 	_carrot_label = Label.new()
-	_carrot_label.add_theme_font_size_override("font_size", 7)
+	_carrot_label.add_theme_font_size_override("font_size", 9)
 	_carrot_label.add_theme_color_override("font_color", Color.WHITE)
 	_carrot_label.position = Vector2(78, 2)
 	_carrot_label.size = Vector2(40, 14)
@@ -95,7 +95,7 @@ func _build_hud() -> void:
 	_stage.add_child(_broccoli_icon)
 
 	_broccoli_label = Label.new()
-	_broccoli_label.add_theme_font_size_override("font_size", 7)
+	_broccoli_label.add_theme_font_size_override("font_size", 9)
 	_broccoli_label.add_theme_color_override("font_color", Color("ffd54f"))
 	_broccoli_label.position = Vector2(128, 2)
 	_broccoli_label.size = Vector2(40, 14)
@@ -105,7 +105,7 @@ func _build_hud() -> void:
 	# Fullscreen toggle
 	var fs := Button.new()
 	fs.text = "FS"
-	fs.add_theme_font_size_override("font_size", 6)
+	fs.add_theme_font_size_override("font_size", 7)
 	fs.position = Vector2(GAME_W - 34, 2)
 	fs.size = Vector2(30, 14)
 	fs.pressed.connect(func():
