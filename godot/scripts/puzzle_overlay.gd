@@ -124,7 +124,9 @@ func _build_math(panel: Control) -> void:
 		if fb != _correct_answer and fb not in distractors:
 			distractors.append(fb)
 
-	var choices: Array[int] = [_correct_answer] + distractors
+	var choices: Array[int] = []
+	choices.append(_correct_answer)
+	choices.append_array(distractors)
 	choices.shuffle()
 
 	var btn_w := 60.0; var btn_h := 40.0; var gap := 12.0
