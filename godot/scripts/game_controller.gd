@@ -37,7 +37,8 @@ var collected_broccolis: int  = 0
 var enemies:           Array  = []
 var solved_puzzles:    Array  = []
 var diggable_tiles:    Dictionary = {}  # "r,c" -> StaticBody2D
-var checkpoint_flags:  Dictionary = {}  # col -> Sprite2D
+var checkpoints:       Array = []       # [{x, y, flag, activated}]
+var checkpoint_pos:    Vector2 = Vector2.ZERO  # current respawn point
 var has_dig_ability:   bool   = false
 static var requested_level := 1  # set by start screen before scene change
 
@@ -59,6 +60,7 @@ func _ready() -> void:
 	SignalBus.try_dig.connect(_on_try_dig)
 	SignalBus.puzzle_result.connect(_on_puzzle_result)
 	SignalBus.puzzle_triggered.connect(_launch_puzzle)
+	SignalBus.hurt.connect(_on_player_hurt)
 
 
 func set_level(n: int) -> void:
@@ -92,6 +94,7 @@ func _load_level(n: int) -> void:
 	_spawn_entities()
 	_setup_camera()
 	_setup_hud()
+	checkpoint_pos = parsed.bunny_spawn  # initial respawn point
 
 
 func _config_for(n: int) -> Dictionary:
@@ -375,27 +378,39 @@ func _spawn_door(spec: Dictionary) -> void:
 
 
 func _spawn_checkpoint(spec: Dictionary) -> void:
-	# Checkpoint flag (2x-tall sprite, off state)
-	var marker := Sprite2D.new()
-	marker.position = Vector2(spec.x, spec.y - TILE_SIZE / 2)
-	marker.z_index = 30
+	# Checkpoint flag — 2x-tall sprite planted in the ground like the JS version.
+	var flag := Sprite2D.new()
+	flag.position = Vector2(spec.x, spec.y)  # tile center; pole sinks into ground below
+	flag.z_index = 30
 	var tex: Texture2D = SpriteGenerator.get_texture("tile_checkpoint_off")
 	if tex:
-		marker.texture = tex
-		marker.scale = Vector2(2, 2)  # 16x32 src -> 32x64 display
-		marker.centered = true
-	entity_parent.add_child(marker)
-	checkpoint_flags[spec.col] = marker
+		flag.texture = tex
+		flag.scale = Vector2(3, 3)  # 16x32 src -> 48x96 display
+		flag.centered = true
+	entity_parent.add_child(flag)
+	checkpoints.append({
+		x = spec.x, y = spec.y,
+		flag = flag, activated = false,
+	})
 
 
-## Checkpoint activation — turns flag orange, saves respawn point.
-func _activate_checkpoint(col: int) -> void:
-	if checkpoint_flags.has(col):
-		var flag: Sprite2D = checkpoint_flags[col]
-		var on_tex: Texture2D = SpriteGenerator.get_texture("tile_checkpoint_on")
-		if on_tex:
-			flag.texture = on_tex
-	checkpoint_flags.erase(col)
+## Check checkpoint activation — called from _process.
+func _check_checkpoints() -> void:
+	if not player:
+		return
+	for cp in checkpoints:
+		if cp.activated:
+			continue
+		var d: Vector2 = Vector2(cp.x, cp.y) - player.position
+		if d.length() < TILE_SIZE * 1.2:
+			cp.activated = true
+			var flag: Sprite2D = cp.flag
+			var on_tex: Texture2D = SpriteGenerator.get_texture("tile_checkpoint_on")
+			if on_tex:
+				flag.texture = on_tex
+			checkpoint_pos = Vector2(cp.x, cp.y)
+			AudioManager.play_sfx("checkpoint")
+			print("[GameController] checkpoint activated at ", checkpoint_pos)
 
 
 func _spawn_exit_carrot(spec: Dictionary) -> void:
@@ -444,6 +459,12 @@ func _setup_camera() -> void:
 	camera.position = player.position
 
 
+## Called when the bunny takes damage — respawn at last checkpoint.
+func _on_player_hurt(lives_left: int) -> void:
+	player.position = checkpoint_pos
+	player.velocity = Vector2.ZERO
+
+
 func _on_try_dig() -> void:
 	if not has_dig_ability: return
 	# Find X tile beneath player and dig column
@@ -469,6 +490,7 @@ func _process(delta: float) -> void:
 	if camera and player:
 		camera.position = player.position
 	_process_enemies(delta)
+	_check_checkpoints()
 	if Input.is_action_just_pressed("dig"):
 		_on_try_dig()
 	if Input.is_action_just_pressed("fullscreen"):
