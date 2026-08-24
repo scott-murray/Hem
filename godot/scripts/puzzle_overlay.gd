@@ -67,16 +67,16 @@ func _build_spelling(panel: Control) -> void:
 	_correct_letter = word[hidden]
 
 	# Title
-	_add_label(panel, "✏ SPELL IT!", GAME_W / 2, PANEL_Y + 20, 14, Color("ce93d8"))
+	_add_label(panel, "SPELL IT!", GAME_W / 2, PANEL_Y + 20, 10, Color("ce93d8"))
 
 	# Word display
 	var display := ""
 	for i in word.length():
 		display += ("_ " if i == hidden else word[i] + " ") if i < word.length() - 1 else ("_" if i == hidden else word[i])
-	_add_label(panel, display, GAME_W / 2, PANEL_Y + 55, 22, Color.WHITE)
+	_add_label(panel, display, GAME_W / 2, PANEL_Y + 55, 16, Color.WHITE)
 
 	# Instruction
-	_add_label(panel, "Which letter fills the blank?", GAME_W / 2, PANEL_Y + 82, 9, Color("b0bec5"))
+	_add_label(panel, "Which letter fills the blank?", GAME_W / 2, PANEL_Y + 82, 7, Color("b0bec5"))
 
 	# Generate 3 distractors
 	var distractors: Array[String] = []
@@ -108,9 +108,9 @@ func _build_math(panel: Control) -> void:
 	var b := randi() % 9 + 1
 	_correct_answer = a + b
 
-	_add_label(panel, "🔢 MATH MAGIC!", GAME_W / 2, PANEL_Y + 20, 14, Color("80cbc4"))
-	_add_label(panel, "%d + %d = ?" % [a, b], GAME_W / 2, PANEL_Y + 55, 26, Color.WHITE)
-	_add_label(panel, "Pick the right answer!", GAME_W / 2, PANEL_Y + 82, 9, Color("b0bec5"))
+	_add_label(panel, "MATH MAGIC!", GAME_W / 2, PANEL_Y + 20, 10, Color("80cbc4"))
+	_add_label(panel, "%d + %d = ?" % [a, b], GAME_W / 2, PANEL_Y + 55, 18, Color.WHITE)
+	_add_label(panel, "Pick the right answer!", GAME_W / 2, PANEL_Y + 82, 7, Color("b0bec5"))
 
 	var distractors: Array[int] = []
 	var offsets := [3, 2, 1, -1, -2, -3, 4, -4]
@@ -141,13 +141,13 @@ func _build_math(panel: Control) -> void:
 
 
 func _build_dig_teach(panel: Control) -> void:
-	_add_label(panel, "⛏ NEW ABILITY!", GAME_W / 2, PANEL_Y + 20, 14, Color("ffcc80"))
-	_add_label(panel, "DIG", GAME_W / 2, PANEL_Y + 55, 24, Color.WHITE)
-	_add_label(panel, "Press ↓ or swipe down on soft earth\nto burrow through crumbly ground!", GAME_W / 2, PANEL_Y + 82, 9, Color("b0bec5"))
+	_add_label(panel, "NEW ABILITY!", GAME_W / 2, PANEL_Y + 20, 10, Color("ffcc80"))
+	_add_label(panel, "DIG", GAME_W / 2, PANEL_Y + 55, 16, Color.WHITE)
+	_add_label(panel, "Press DOWN or swipe down on soft earth\nto burrow through crumbly ground!", GAME_W / 2, PANEL_Y + 82, 7, Color("b0bec5"))
 
 	var btn := Button.new()
-	btn.text = "GOT IT! ✓"
-	btn.add_theme_font_size_override("font_size", 14)
+	btn.text = "GOT IT!"
+	btn.add_theme_font_size_override("font_size", 10)
 	btn.position = Vector2(GAME_W / 2 - 70, PANEL_Y + 130)
 	btn.size = Vector2(140, 40)
 	btn.pressed.connect(func(): _on_answer(true))
@@ -170,8 +170,8 @@ func _add_label(parent: Control, text: String, x: float, y: float, size: int, co
 	lbl.text = text
 	lbl.add_theme_font_size_override("font_size", size)
 	lbl.add_theme_color_override("font_color", color)
-	lbl.position = Vector2(x - 80, y)
-	lbl.size = Vector2(160, size + 8)
+	lbl.position = Vector2(x - 150, y)
+	lbl.size = Vector2(300, size + 8)
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	parent.add_child(lbl)
 
@@ -181,7 +181,7 @@ func _add_answer_button(x: float, y: float, w: float, h: float, label: String, c
 	print("[PuzzleOverlay] adding button ", label, " at ", x, ",", y)
 	var btn := Button.new()
 	btn.text = label
-	btn.add_theme_font_size_override("font_size", 18)
+	btn.add_theme_font_size_override("font_size", 14)
 	btn.position = Vector2(x, y)
 	btn.size = Vector2(w, h)
 	btn.pressed.connect(callback)

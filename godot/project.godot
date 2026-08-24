@@ -32,6 +32,10 @@ window/stretch/mode="viewport"
 
 enabled=PackedStringArray()
 
+[gui]
+
+theme/custom="res://theme.tres"
+
 [input]
 
 jump={
