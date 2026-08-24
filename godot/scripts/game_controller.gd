@@ -187,13 +187,13 @@ func _spawn_collectible(spec: Dictionary, texture_key: String, callback: String)
 	shape.shape = CircleShape2D.new()
 	shape.shape.radius = 14.0
 	area.add_child(shape)
-	# Visible sprite (was missing before!)
+	# Visible sprite — integer 2x scale for crisp pixels (web uses 0.55/0.5
+	# non-integer scales, which smudge with nearest filtering)
 	var tex: Texture2D = SpriteGenerator.get_texture(texture_key)
 	if tex:
 		var sprite := Sprite2D.new()
 		sprite.texture = tex
-		# Match web scale: small carrot = 0.55 * 3 = 1.65, broccoli = 1.5
-		sprite.scale = Vector2(1.65, 1.65) if texture_key == "carrot" else Vector2(1.5, 1.5)
+		sprite.scale = Vector2(2, 2)
 		sprite.centered = true
 		area.add_child(sprite)
 		# Bob animation
@@ -243,13 +243,13 @@ func _spawn_enemy(spec: Dictionary, enemy_type: String) -> void:
 	shape.shape.size = Vector2(TILE_SIZE * 0.7, TILE_SIZE * 0.7)
 	enemy.add_child(shape)
 
-	# Visible sprite
+	# Visible sprite — integer 3x scale (matches web TILE_SCALE)
 	var tex_key := "enemy_fox" if enemy_type == "fox" else "enemy_beetle"
 	var tex: Texture2D = SpriteGenerator.get_texture(tex_key)
 	if tex:
 		var sprite := Sprite2D.new()
 		sprite.texture = tex
-		sprite.scale = Vector2(2.5, 2.5)
+		sprite.scale = Vector2(3, 3)
 		sprite.centered = true
 		sprite.name = "Sprite"
 		enemy.add_child(sprite)
