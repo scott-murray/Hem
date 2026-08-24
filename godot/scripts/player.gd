@@ -25,6 +25,8 @@ var facing_right  := true
 var lives         := 3
 var is_invuln     := false
 var invuln_timer  := 0.0
+var _anim_time    := 0.0
+var _run_frame    := 0
 
 # Touch state (set by TouchHandler)
 var _touch_left  := false
@@ -109,6 +111,8 @@ func _physics_process(delta: float) -> void:
 		AudioManager.play_sfx("land")
 	was_on_ground = is_on_floor()
 
+	_update_animation(delta)
+
 	move_and_slide()
 
 	# Invulnerability blink
@@ -118,6 +122,33 @@ func _physics_process(delta: float) -> void:
 		if invuln_timer <= 0.0:
 			is_invuln = false
 			modulate = Color.WHITE
+
+
+## Switch sprite texture based on movement state (ports the JS anim logic).
+func _update_animation(delta: float) -> void:
+	if not has_node("Sprite2D"):
+		return
+	var sprite: Sprite2D = $Sprite2D
+
+	# Hurt: blink between hurt and idle while invulnerable
+	if is_invuln:
+		sprite.texture = SpriteGenerator.get_texture(
+			"bunny_hurt" if int(invuln_timer * 10) % 2 == 0 else "bunny_idle")
+		return
+
+	var moving := absf(velocity.x) > 10.0
+
+	if not is_on_floor():
+		sprite.texture = SpriteGenerator.get_texture("bunny_jump")
+	elif moving:
+		# Run cycle at 10 fps
+		_anim_time += delta
+		if _anim_time >= 0.1:
+			_anim_time = 0.0
+			_run_frame = (_run_frame + 1) % 4
+		sprite.texture = SpriteGenerator.get_texture("bunny_run_%d" % _run_frame)
+	else:
+		sprite.texture = SpriteGenerator.get_texture("bunny_idle")
 
 
 func set_touch_walk(left: bool, right: bool) -> void:

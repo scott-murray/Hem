@@ -15,7 +15,8 @@ static func generate_all() -> void:
 		return
 	var dir := "res://textures/gen"
 	var files := [
-		"bunny_idle", "bunny_jump",
+		"bunny_idle", "bunny_jump", "bunny_hurt",
+		"bunny_run_0", "bunny_run_1", "bunny_run_2", "bunny_run_3",
 		"tile_grass", "tile_ground", "tile_platform", "tile_diggable",
 		"tile_door", "tile_spike", "tile_puzzle",
 		"enemy_fox", "enemy_beetle",
